@@ -24,7 +24,9 @@
     "markdown"
   ],
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "keybindings": [
       {

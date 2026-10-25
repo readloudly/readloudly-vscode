@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Queue } from './player/queue.ts';
 import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
-import { splitSentences, type Sentence } from './text/sentences.ts';
+import { splitSentences, wordAt, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
@@ -24,6 +24,15 @@ export function activate(context: vscode.ExtensionContext) {
   let highlighted: vscode.Range[] = [];
   let boots = 0;
   let decoration = makeDecoration();
+  let word: vscode.Range[] = [];
+  let lensLine: { uri: string; line: number } | undefined;
+  const lensChanged = new vscode.EventEmitter<void>();
+  const wordDecoration = vscode.window.createTextEditorDecorationType({
+    backgroundColor: new vscode.ThemeColor('readloudly.wordHighlight'),
+    border: '1px solid',
+    borderColor: new vscode.ThemeColor('readloudly.wordBorder'),
+    borderRadius: '3px',
+  });
 
   function makeDecoration() {
     const color = cfg().get<string>('highlightColor') || 'readloudly.sentenceHighlight';
@@ -45,7 +54,10 @@ export function activate(context: vscode.ExtensionContext) {
     const live =
       s && resumeAt === undefined && (queue.status === 'playing' || queue.status === 'paused');
     highlighted = [];
+    word = [];
+    lensChanged.fire();
     for (const editor of vscode.window.visibleTextEditors) {
+      editor.setDecorations(wordDecoration, []);
       const own = live && editor.document.uri.toString() === source.uri?.toString();
       const ranges = own
         ? [new vscode.Range(editor.document.positionAt(s.start), editor.document.positionAt(s.end))]
@@ -162,6 +174,14 @@ export function activate(context: vscode.ExtensionContext) {
       } else if (m.type === 'voices') {
         voices = m.voices;
         sync();
+      } else if (m.type === 'word') {
+        const s = queue.current;
+        if (m.token !== queue.token || !s) return;
+        const [a, b] = wordAt(s, m.charIndex);
+        for (const editor of sourceEditors()) {
+          word = [new vscode.Range(editor.document.positionAt(a), editor.document.positionAt(b))];
+          editor.setDecorations(wordDecoration, word);
+        }
       } else if (m.type === 'ended') {
         if (queue.ended(m.token)) speak();
       } else if (m.type === 'error' && m.token === queue.token) {
@@ -224,12 +244,53 @@ export function activate(context: vscode.ExtensionContext) {
     if (pick) await cfg().update('voice', pick.name, vscode.ConfigurationTarget.Global);
   }
 
+  const voiceLabel = () => {
+    const name = cfg().get<string>('voice', '');
+    return voices.find((v) => v.name === name)?.label ?? (name || 'System voice');
+  };
+
+  // Controls sit above the line the user clicked, so reading starts and steers right where they look.
+  const lineControls: vscode.CodeLensProvider = {
+    onDidChangeCodeLenses: lensChanged.event,
+    provideCodeLenses(doc) {
+      if (!cfg().get('lineControls', true) || doc.uri.toString() !== lensLine?.uri) return [];
+      const line = Math.min(lensLine.line, doc.lineCount - 1);
+      const range = doc.lineAt(line).range;
+      const lens = (title: string, command: string, tooltip: string, args?: unknown[]) =>
+        new vscode.CodeLens(range, {
+          title,
+          tooltip,
+          command: `readloudly.${command}`,
+          arguments: args,
+        });
+      const live = queue.status === 'playing' || queue.status === 'paused';
+      return [
+        ...(live
+          ? [
+              queue.status === 'playing'
+                ? lens('$(debug-pause) Pause', 'togglePause', 'Pause')
+                : lens('$(play) Resume', 'togglePause', 'Resume'),
+              lens('$(debug-step-back)', 'previous', 'Previous sentence'),
+              lens('$(debug-step-over)', 'next', 'Next sentence'),
+              lens('$(debug-stop)', 'stop', 'Stop'),
+            ]
+          : []),
+        lens('$(unmute) Read from here', 'readFromLine', 'Read aloud from this line', [
+          doc.uri,
+          line,
+        ]),
+        lens(`${speed()}×`, 'cycleSpeed', 'Change speed'),
+        lens(voiceLabel(), 'chooseVoice', 'Choose voice'),
+      ];
+    },
+  };
+
   const restartIfPlaying = () => {
     if (queue.status === 'playing') queue.load(queue.items, queue.index);
     speak();
   };
 
-  const commands: Record<string, () => unknown> = {
+  const commands: Record<string, (...args: never[]) => unknown> = {
     readSelection: () => {
       const editor = editorOrWarn();
       if (!editor) return;
@@ -270,6 +331,16 @@ export function activate(context: vscode.ExtensionContext) {
       queue.previous();
       speak();
     },
+    readFromLine: async (uri: vscode.Uri, line: number) => {
+      const doc = await vscode.workspace.openTextDocument(uri);
+      readDocFrom(doc, doc.offsetAt(new vscode.Position(line, 0)));
+    },
+    cycleSpeed: () =>
+      cfg().update(
+        'speed',
+        SPEEDS[(SPEEDS.indexOf(speed()) + 1) % SPEEDS.length],
+        vscode.ConfigurationTarget.Global
+      ),
     faster: () => setSpeed(1),
     slower: () => setSpeed(-1),
     chooseVoice,
@@ -283,6 +354,15 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     status,
     { dispose: () => decoration.dispose() },
+    wordDecoration,
+    lensChanged,
+    vscode.languages.registerCodeLensProvider({ scheme: '*' }, lineControls),
+    vscode.window.onDidChangeTextEditorSelection((e) => {
+      if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse || !e.selections[0]!.isEmpty)
+        return;
+      lensLine = { uri: e.textEditor.document.uri.toString(), line: e.selections[0]!.active.line };
+      lensChanged.fire();
+    }),
     ...Object.entries(commands).map(([id, run]) =>
       vscode.commands.registerCommand(`readloudly.${id}`, run)
     ),
@@ -302,6 +382,10 @@ export function activate(context: vscode.ExtensionContext) {
       else if (e.affectsConfiguration('readloudly')) sync();
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
+      if (e.contentChanges.length && e.document.uri.toString() === lensLine?.uri) {
+        lensLine = undefined;
+        lensChanged.fire();
+      }
       const s = queue.current;
       if (!s || queue.status === 'idle' || resumeAt !== undefined || !e.contentChanges.length)
         return;
@@ -317,7 +401,16 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  return { highlighted: () => highlighted, status: () => queue.status, boots: () => boots };
+  return {
+    highlighted: () => highlighted,
+    word: () => word,
+    status: () => queue.status,
+    boots: () => boots,
+    clickLine: (uri: vscode.Uri, line: number) => {
+      lensLine = { uri: uri.toString(), line };
+      lensChanged.fire();
+    },
+  };
 }
 
 // Hovering the status bar item shows a mini player, so the full view can stay closed.

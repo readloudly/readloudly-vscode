@@ -5,6 +5,7 @@ interface Api {
   highlighted(): vscode.Range[];
   status(): string;
   boots(): number;
+  clickLine(uri: vscode.Uri, line: number): void;
 }
 
 const run = (id: string) => vscode.commands.executeCommand(`readloudly.${id}`);
@@ -67,6 +68,34 @@ suite('ReadLoudly free reader', () => {
     const revert = new vscode.WorkspaceEdit();
     revert.delete(doc.uri, new vscode.Range(at, at.translate(0, 1)));
     await vscode.workspace.applyEdit(revert);
+  });
+
+  test('clicking a line shows play controls above it', async () => {
+    await run('stop');
+    api.clickLine(doc.uri, 8);
+    const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+      'vscode.executeCodeLensProvider',
+      doc.uri
+    );
+    assert.deepEqual(
+      lenses.map((l) => [l.range.start.line, l.command?.command]),
+      [
+        [8, 'readloudly.readFromLine'],
+        [8, 'readloudly.cycleSpeed'],
+        [8, 'readloudly.chooseVoice'],
+      ]
+    );
+    await vscode.commands.executeCommand(
+      lenses[0]!.command!.command,
+      ...lenses[0]!.command!.arguments!
+    );
+    await run('togglePause');
+    assert.deepEqual(lit(), ['See [the docs](https://example.com) for more.']);
+    const playing = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+      'vscode.executeCodeLensProvider',
+      doc.uri
+    );
+    assert.equal(playing[0]!.command!.title, '$(play) Resume');
   });
 
   test('M1 makes no network call', () => {
