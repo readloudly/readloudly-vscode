@@ -68,7 +68,7 @@ async function speakKokoro(m: { token: number; text: string; rate: number; voice
     ctx ??= new AudioContext();
     if (ctx.state !== 'running') throw new Error('sound needs one click in the ReadLoudly player');
     const buffer = ctx.createBuffer(1, samples.length, rate);
-    buffer.copyToChannel(samples, 0);
+    buffer.getChannelData(0).set(samples);
     source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);

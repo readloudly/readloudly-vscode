@@ -23,7 +23,7 @@ test('every comment is a single line (workspace rule)', () => {
     const lines = readFileSync(f, 'utf8').split('\n');
     return lines.flatMap((l, i) => {
       const doubled = /^\s*\/\//.test(l) && /^\s*\/\//.test(lines[i + 1] ?? '');
-      const block = /\/\*/.test(l) && !/\*\//.test(l);
+      const block = /(^|\s)\/\*/.test(l) && !/\*\//.test(l);
       return doubled || block ? [`${f}:${i + 1}`] : [];
     });
   });
