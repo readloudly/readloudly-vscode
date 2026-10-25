@@ -20,3 +20,4 @@
 - CodeLens items now carry an icon + verb (Read aloud from here / speed / voice; Pause, Back, Skip, Stop while live); Kokoro voice shows its name, not the raw id.
 - Lightbulb action moved to Quick Fix kind so "Read selection aloud" is first (custom kind sat under More Actions). Verified in EDH; 31 unit + 7 integration pass; reinstalled in Antigravity.
 - CodeLens color/size is theme-owned (editorCodeLens.foreground, editor.codeLensFontSize); no per-extension override exists.
+- Later: lightbulb Code Action removed (VS Code forces a bulb icon by kind); selecting text now puts "▶️ Listen to selection" in the line player row. Lens uses one emoji family (media-control squircles) since CodeLens can't render SVG or colored codicons; en-space padding guarded by ZWSP so VS Code doesn't trim it. 7 integration pass; reinstalled in Antigravity.
