@@ -253,9 +253,9 @@ export function activate(context: vscode.ExtensionContext) {
               queue.status === 'playing'
                 ? lens('$(readloudly-pause) Pause', 'togglePause', 'Pause')
                 : lens('$(readloudly-play) Resume', 'togglePause', 'Resume'),
-              lens('$(readloudly-previous)', 'previous', 'Previous sentence'),
-              lens('$(readloudly-next)', 'next', 'Next sentence'),
-              lens('$(readloudly-stop)', 'stop', 'Stop reading'),
+              lens('$(readloudly-previous) Back', 'previous', 'Previous sentence'),
+              lens('$(readloudly-next) Next', 'next', 'Next sentence'),
+              lens('$(readloudly-stop) Stop', 'stop', 'Stop reading'),
             ]
           : lensLine.selected
             ? [
@@ -271,9 +271,9 @@ export function activate(context: vscode.ExtensionContext) {
                   line,
                 ]),
               ]),
-        lens(`$(readloudly-speed) ${speed()}×`, 'cycleSpeed', 'Change speed'),
+        lens(`$(readloudly-speed) Speed ${speed()}×`, 'cycleSpeed', 'Change speed'),
         lens(
-          `$(readloudly-voice) ${voiceLabel().replace(/ \(.*\)$/, '')}`,
+          `$(readloudly-voice) Voice: ${voiceLabel().replace(/ \(.*\)$/, '')}`,
           'chooseVoice',
           'Choose voice'
         ),
