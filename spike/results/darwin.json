@@ -3,24 +3,24 @@
   "release": "27.0.0",
   "vscode": "1.143.0",
   "appName": "Visual Studio Code",
-  "when": "2026-10-25T05:07:05.289Z",
+  "when": "2026-10-25T05:32:13.249Z",
   "os": [
     {
       "cmd": "say",
-      "spawnMs": 2,
-      "totalMs": 5459,
+      "spawnMs": 5,
+      "totalMs": 4651,
       "error": null
     },
     {
       "cmd": "say",
       "spawnMs": 3,
-      "totalMs": 3957,
+      "totalMs": 3950,
       "error": null
     },
     {
       "cmd": "say",
-      "spawnMs": 2,
-      "totalMs": 4387,
+      "spawnMs": 3,
+      "totalMs": 4008,
       "error": null
     }
   ],
@@ -28,7 +28,7 @@
     "voices": {
       "available": true,
       "count": 180,
-      "waitedMs": 122,
+      "waitedMs": 124,
       "sample": [
         "Albert (en-US, local)",
         "Alice (it-IT, local)",
@@ -41,8 +41,8 @@
       ],
       "utterance": {
         "boundaries": 9,
-        "startMs": 47,
-        "endMs": 4301,
+        "startMs": 39,
+        "endMs": 4296,
         "error": null
       }
     },
@@ -80,7 +80,7 @@
       "-r",
       "1.5"
     ],
-    "totalMs": 4990,
+    "totalMs": 4994,
     "error": null
   },
   "float": {
@@ -89,21 +89,5 @@
     "workbench.action.enableWindowAlwaysOnTop": "ok",
     "webviewAliveAfterMove": true,
     "webviewBoots": 2
-  },
-  "manual": {
-    "afterClick": {
-      "muted": false,
-      "rate": 1.5,
-      "preservesPitch": true,
-      "duration": 6.114785,
-      "wallMs": 4079,
-      "error": null,
-      "expectedMs": 4077
-    },
-    "replayNoGesture": {
-      "fresh": "NotAllowedError",
-      "reusedElement": "ok",
-      "keptContext": "running, advanced 501 ms"
-    }
   }
 }

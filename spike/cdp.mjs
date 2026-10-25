@@ -1,4 +1,4 @@
-// Drives a spike started with `spike/run.sh --remote-debugging-port=9333`: node spike/cdp.mjs audio | minsize | geom | bounds | set <l> <t> <w> <h> | quit
+// Drives a spike started with `spike/run.sh --remote-debugging-port=9333`: node spike/cdp.mjs audio | minsize | geom | bounds | set <l> <t> <w> <h> | replay | quit
 const PORT = 9333;
 const step = process.argv[2];
 const ver = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
@@ -68,8 +68,15 @@ if (step === "set") {
 if (step === "geom") {
   const a = await auxEval(`(() => { const f = [...document.querySelectorAll('iframe')].map((i) => i.getBoundingClientRect()).find((b) => b.width > 0); return { screenX, screenY, chrome: outerHeight - innerHeight, iframe: f && { x: f.x, y: f.y, w: f.width, h: f.height } }; })()`);
   const c = await webviewContext();
-  const pill = await evalIn(c, "(() => { const p = document.getElementById('pill'); const b = p.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, region: getComputedStyle(p).webkitAppRegion || getComputedStyle(p).getPropertyValue('app-region') }; })()");
+  const pill = await evalIn(c, "(() => { const p = document.getElementById('pill'); const b = p.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, region: getComputedStyle(p).webkitAppRegion || getComputedStyle(p).getPropertyValue('app-region'), button: (({ x, y, width, height }) => ({ x, y, width, height }))(document.getElementById('click-mp3').getBoundingClientRect()) }; })()");
   console.log(JSON.stringify({ aux: a, pill }));
+}
+if (step === "replay") {
+  const c = await webviewContext();
+  console.log("activation:", await evalIn(c, "JSON.stringify({ hasBeenActive: navigator.userActivation.hasBeenActive, isActive: navigator.userActivation.isActive })"));
+  await evalIn(c, "window.postMessage({ type: 'replay' }, '*')");
+  await wait(7000);
+  console.log("log tail:", (await evalIn(c, "document.getElementById('log').textContent")).split("\n").slice(-3).join(" | "));
 }
 if (step === "quit") {
   const c = await webviewContext();

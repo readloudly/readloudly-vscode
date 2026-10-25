@@ -252,6 +252,7 @@ exports.activate = (context) => {
     async deserializeWebviewPanel(panel) {
       panel.webview.options = { enableScripts: true, localResourceRoots: [] };
       panel.webview.html = html(panel.webview, crypto.randomBytes(16).toString("base64"), "restored");
+      panel.webview.onDidReceiveMessage((m) => m.type === "quit" && vscode.commands.executeCommand("workbench.action.quit"));
     },
   }));
   if (process.env.RL_SPIKE_RESTORE) return;
