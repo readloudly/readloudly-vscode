@@ -21,7 +21,7 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 
 ## Status (2026-10-25)
 
-- M0 engine spike: macOS done (`docs/engine-spike.md`); Windows, Linux, Cursor, Windsurf open.
+- M0 engine spike: macOS done (`docs/engine-spike.md`); Antigravity IDE checked; Linux tests pass (voices unchecked); Windows, Cursor, Windsurf open.
 - M1 free reader on `feat/m1-free-reader`: commands, Markdown masking, sentence highlight, Web Speech
   voices, docked player view (`src/player/panel.ts`) + status-bar hover controls. The floating window
   from the plan was dropped (root DECISIONS.md, 2026-10-25). `spike/` is throwaway, never packaged.

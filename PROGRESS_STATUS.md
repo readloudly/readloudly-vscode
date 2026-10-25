@@ -9,3 +9,8 @@
 - Floating player window replaced by a docked ReadLoudly panel view + status-bar hover mini player (owner: the second window looked ugly).
 - Webview message origin check added (Semgrep finding); restore after quit and replay verified in an Extension Development Host.
 - Gates: 26 unit, 5 integration, lint, tsc, prettier, vsix 8 files. macOS only.
+
+## 2026-10-25 — Antigravity IDE and Linux checks
+
+- Antigravity IDE 1.107 (macOS): vsix installs; speech, sentence 1→4, editor highlight, ReadLoudly panel tab, focus kept, speaks with panel hidden (CDP, isolated /tmp profile).
+- Linux (Debian bookworm arm64, xvfb, test-electron download): unit + 5 integration tests pass.

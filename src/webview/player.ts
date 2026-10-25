@@ -1,4 +1,5 @@
 import type { FromWebview, Voice } from '../player/panel.ts';
+import { goodVoices } from '../player/voices.ts';
 
 export interface PlayerState {
   type: 'state';
@@ -25,7 +26,7 @@ let current = -1;
 let keepalive = 0;
 
 const listVoices = (): Voice[] =>
-  synth.getVoices().map((v) => ({ name: v.name, lang: v.lang, isDefault: v.default }));
+  goodVoices(synth.getVoices()).map((v) => ({ name: v.name, lang: v.lang, isDefault: v.default }));
 const sendVoices = () => api.postMessage({ type: 'voices', voices: listVoices() });
 
 function cancel() {
