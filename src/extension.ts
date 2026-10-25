@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
   let voices: Voice[] = [];
   let panel: vscode.WebviewPanel | undefined;
   let highlighted: vscode.Range[] = [];
+  let boots = 0;
   let decoration = makeDecoration();
 
   function makeDecoration() {
@@ -161,8 +162,10 @@ export function activate(context: vscode.ExtensionContext) {
       sync();
     });
     p.webview.onDidReceiveMessage((m: FromWebview) => {
-      if (m.type === 'boot') speak();
-      else if (m.type === 'voices') {
+      if (m.type === 'boot') {
+        boots++;
+        speak();
+      } else if (m.type === 'voices') {
         voices = m.voices;
         sync();
       } else if (m.type === 'ended') {
@@ -323,7 +326,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  return { highlighted: () => highlighted, status: () => queue.status };
+  return { highlighted: () => highlighted, status: () => queue.status, boots: () => boots };
 }
 
 export function deactivate() {}

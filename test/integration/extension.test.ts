@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 interface Api {
   highlighted(): vscode.Range[];
   status(): string;
+  boots(): number;
 }
 
 const run = (id: string) => vscode.commands.executeCommand(`readloudly.${id}`);
@@ -39,6 +40,11 @@ suite('ReadLoudly free reader', () => {
     assert.deepEqual(lit(), ['Getting started']);
     await run('next');
     assert.deepEqual(lit(), ['ReadLoudly reads this file aloud.']);
+  });
+
+  test('the floating player loads its page', async () => {
+    for (let i = 0; i < 50 && api.boots() === 0; i++) await new Promise((r) => setTimeout(r, 200));
+    assert.ok(api.boots() > 0, 'the player webview never sent boot');
   });
 
   test('Read Selection reads link text and highlights the source range', async () => {
