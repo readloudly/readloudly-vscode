@@ -68,6 +68,30 @@ const sendVoices = () => api.postMessage({ type: 'voices', voices: listVoices() 
 
 function cancel() {
   current = -1;
+  audio.onended = audio.onerror = null;
+  audio.pause();
+}
+
+// Pro clips are MP3 bytes from the extension host; the media element keeps the pitch when the speed changes.
+function play(m: { token: number; audio: ArrayBuffer; rate: number }) {
+  cancel();
+  current = m.token;
+  const url = URL.createObjectURL(new Blob([m.audio], { type: 'audio/mpeg' }));
+  const done = (error?: string) => {
+    URL.revokeObjectURL(url);
+    if (m.token !== current) return;
+    api.postMessage(
+      error ? { type: 'error', token: m.token, error } : { type: 'ended', token: m.token }
+    );
+  };
+  audio.src = url;
+  audio.playbackRate = m.rate;
+  audio.onended = () => done();
+  audio.onerror = () => done('the audio could not be played');
+  audio.play().catch((e: unknown) => {
+    if (e instanceof DOMException && e.name === 'NotAllowedError') $('unlock').hidden = false;
+    done('click Turn on sound in the ReadLoudly section of the Explorer, once');
+  });
   clearInterval(keepalive);
   synth.cancel();
   source?.stop();
@@ -159,6 +183,7 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
   if (e.origin !== location.origin) return;
   const m = e.data;
   if (m.type === 'speak') speak(m);
+  else if (m.type === 'play') play(m);
   else if (m.type === 'cancel') cancel();
 });
 
