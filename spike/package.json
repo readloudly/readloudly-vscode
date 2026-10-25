@@ -1,0 +1,14 @@
+{
+  "name": "readloudly-m0-spike",
+  "displayName": "ReadLoudly M0 spike",
+  "description": "Throwaway engine and floating-window probes for M0. Never packaged.",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "readloudly",
+  "engines": { "vscode": "^1.100.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [{ "command": "readloudlySpike.run", "title": "ReadLoudly Spike: Run probes" }]
+  }
+}

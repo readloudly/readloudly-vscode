@@ -1,0 +1,60 @@
+# OpenSpec project config. Everything below the "This repo:" line is shared ReadLoudly text from
+# the workspace template openspec/repo-config.template.yaml; change it there and in every repo.
+schema: spec-driven
+
+context: |
+  This repo: readloudly-vscode, the VS Code extension: device-voice read-aloud with editor sentence highlight, a floating player, Pro voices via backend POST /voices and AI actions via vscode.lm (a backend REST client like readloudly-native). Specs here describe this repo's behavior only.
+
+  ReadLoudly is a document read-aloud (TTS) and reading platform. A user uploads a PDF, ebook or
+  image; parser rasterizes each page to a CDN image and extracts sentences with bounding boxes;
+  backend stores them (MongoDB) and embeds text (Qdrant) for RAG chat, summary and search;
+  clients read aloud and highlight the spoken sentence.
+
+  Polyrepo. The workspace root is NOT a git repo; each service is its own repo: backend (NestJS 10,
+  the hub and system of record), parser (NestJS 9 + Python, handles untrusted files),
+  notification-service (NestJS 11 + Socket.IO), frontend (Next.js 15 static export), admin
+  (Next.js 13 static export, privileged), landing (Laravel 12), readloudly-native (Expo 54),
+  rl-chrome-extension (MV3). mcp-server and readloudly-desktop are untracked. Services talk only
+  over HTTP, Redis pub/sub, Socket.IO, MCP and direct CDN reads; there is no shared package.
+
+  Contracts. Changing any of these is BREAKING and must update every consumer in the same change:
+  backend and parser REST shapes; the Redis channel notifications:events and its message shape;
+  Socket.IO event names; mcp-server tool schemas; the Qdrant collection/payload schema and
+  VECTOR_DIMENSION; the CDN asset path {cdnHost}/{folder}/{pageId}-sd.jpg and {pageId}.json; the
+  sentence JSON { id, text, lines: [{ text, bbox }] }.
+
+  Invariants. Sentence id + pageId + bbox are the playback and highlight cursor on every client;
+  never renumber or re-box without versioning. Reading order stays faithful to the source.
+  Vector and RAG queries filter by book only, so book ownership is verified server-side first.
+  The TTS cache is content-addressed and shared across users. Admin route guards are client-side
+  only, so every privileged action needs a backend role check.
+
+rules:
+  proposal:
+    - 'A change that spans repos lives in the repo that owns the contract it changes (backend: REST shapes and the notifications:events publisher; parser: sentence JSON and the CDN asset path; notification-service: Socket.IO event names), otherwise in the repo with most of the work. Open one change per piece of work, never a second copy in another repo.'
+    - Name every affected repo and why it is touched.
+    - List each contract from the project context that the change touches, mark it BREAKING and name all its consumers, or state "No contract changes".
+    - Include a Non-goals section.
+  specs:
+    - 'Organize capabilities by product domain, not by module: documents/, reading/, ai/, accounts/, billing/, community/, notifications/, feedback/, admin/. Place a new capability under one of them, for example reading/sentence-highlight.'
+    - Describe observable behavior, not implementation.
+    - A requirement that reads or writes user data includes a scenario where another user, a guest or a lower role is rejected.
+  design:
+    - State which invariants from the project context the change touches and how each is preserved, or "None".
+    - For untrusted input (uploads, URLs, parser input) state the validation, the size/page/time limits and how shell calls stay safe.
+    - Give the deploy order across repos (additive backend changes ship before the clients that call them) and the rollback.
+  tasks:
+    - Group tasks under one heading per repo, in deploy order.
+    - Each repo group starts by branching feat/<change-name> (or fix/, chore/) from that repo's main and ends with that repo's gates from the workspace CLAUDE.md "Toolchain & Commands" (lint, typecheck or npx tsc --noEmit, tests, build where it exists).
+    - Pair every bug fix with a regression test task and every authorization change with a negative test task.
+
+operations:
+  apply:
+    guidance:
+      - Run git inside each service directory, re-check git status before branching, and stage explicit paths only.
+      - Do not commit or push unless the user asks.
+      - Report each gate's real result; never skip, delete or loosen a test to get green.
+  archive:
+    guidance:
+      - Archive only after the change is merged in every affected repo.
+      - After archiving, update the workspace PROGRESS.md, and DECISIONS.md for architectural decisions.
