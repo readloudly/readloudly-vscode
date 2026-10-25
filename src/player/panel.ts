@@ -90,6 +90,8 @@ svg { width: 20px; height: 20px; display: block; }
 .row { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .row span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .now { margin: 0; min-height: 2.8em; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.note { margin: 0; color: var(--muted); font-size: 12px; }
+.note:empty { display: none; }
 label { color: var(--muted); margin-bottom: -6px; }
 select { font: inherit; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border, var(--line)); border-radius: 6px; padding: 6px 8px; }
 `;
