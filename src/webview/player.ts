@@ -2,7 +2,9 @@ import type { FromWebview, Voice } from '../player/panel.ts';
 import { goodVoices, kokoroVoices } from '../player/voices.ts';
 
 export type ToWebview =
-  { type: 'speak'; token: number; text: string; rate: number; voice: string } | { type: 'cancel' };
+  | { type: 'speak'; token: number; text: string; rate: number; voice: string }
+  | { type: 'play'; token: number; audio: ArrayBuffer; rate: number }
+  | { type: 'cancel' };
 
 declare function acquireVsCodeApi(): { postMessage(message: FromWebview): void };
 const api = acquireVsCodeApi();
@@ -15,8 +17,44 @@ let source: AudioBufferSourceNode | undefined;
 let engine: Promise<typeof import('./kokoro.ts')> | undefined;
 const media = document.body.dataset.media!;
 
-// Webview audio stays blocked until a click in this frame; one click unlocks this context for the session.
-document.addEventListener('click', () => void (ctx ??= new AudioContext()).resume(), true);
+// One media element for every Pro clip: a new element would be blocked again until another click.
+const audio = new Audio();
+let unlocked = false;
+
+// A silent WAV played inside the click unlocks the media element, as resume() does for the AudioContext.
+function silence() {
+  const v = new DataView(new ArrayBuffer(46));
+  const ascii = (at: number, s: string) =>
+    [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  ascii(0, 'RIFF');
+  v.setUint32(4, 38, true);
+  ascii(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true);
+  v.setUint32(28, 16000, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  ascii(36, 'data');
+  v.setUint32(40, 2, true);
+  return URL.createObjectURL(new Blob([v.buffer], { type: 'audio/wav' }));
+}
+
+// Webview audio stays blocked until a click in this frame; one click unlocks both outputs for the session.
+document.addEventListener(
+  'click',
+  () => {
+    void (ctx ??= new AudioContext()).resume();
+    if (unlocked) return;
+    audio.src = silence();
+    audio.play().then(
+      () => (unlocked = true),
+      () => undefined
+    );
+  },
+  true
+);
 
 const listVoices = (): Voice[] => [
   ...kokoroVoices(),

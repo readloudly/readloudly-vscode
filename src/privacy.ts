@@ -13,7 +13,7 @@ export function isBlocked(doc: vscode.TextDocument | undefined): boolean {
 export async function disclosed(state: vscode.Memento): Promise<boolean> {
   if (state.get<boolean>(DISCLOSED)) return true;
   const ok = await vscode.window.showInformationMessage(
-    'ReadLoudly voices and AI send the text you read to ReadLoudly to generate audio. Generated audio is cached by content and can be reused for anyone who reads the same text.',
+    'ReadLoudly voices send the text you read to ReadLoudly to generate audio. Audio is cached by its text and voice, and is reused for anyone who reads the same text.',
     { modal: true },
     'Continue'
   );
