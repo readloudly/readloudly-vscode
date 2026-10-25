@@ -9,3 +9,6 @@
 !LICENSE
 !media/icons.woff
 !media/material-symbols-LICENSE.txt
+!media/icon.png
+!media/walkthrough/*.md
+!CHANGELOG.md

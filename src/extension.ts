@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { ApiError, createClient, describe, type Request } from './api/client.ts';
 import { Clips, estimateCredits, listVoices, type ProVoice } from './api/voices.ts';
+import { ask, NO_MODEL } from './ai/lm.ts';
+import { LANGUAGES, leadingLanguage, type Kind, type Language } from './ai/prompts.ts';
 import { Account } from './auth/session.ts';
 import { Queue } from './player/queue.ts';
 import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
@@ -17,6 +19,8 @@ const PRO_VOICE = 'readloudly.proVoice';
 
 interface Source {
   uri?: vscode.Uri;
+  // A one-off voice for this read, such as a device voice in the language of a translation.
+  voice?: string;
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -51,7 +55,8 @@ export function activate(context: vscode.ExtensionContext) {
   const post = (message: ToWebview) => void view?.webview.postMessage(message);
   const speed = () => cfg().get<number>('speed', 1);
   const voiceName = () => cfg().get<string>('voice', '');
-  const isPro = () => voiceName().startsWith('rl:');
+  const readingVoice = () => source.voice ?? voiceName();
+  const isPro = (name = readingVoice()) => name.startsWith('rl:');
   const apiUrl = () =>
     cfg().get<string>('apiUrl', 'https://api.readloudly.com').replace(/\/+$/, '');
   const webUrl = () =>
@@ -64,8 +69,8 @@ export function activate(context: vscode.ExtensionContext) {
   let proGate: Promise<boolean> | undefined;
   let proDenied = false;
 
-  async function clip(text: string, signal?: AbortSignal) {
-    const body = JSON.stringify({ Text: text, VoiceId: voiceName().slice('rl:'.length) });
+  async function clip(text: string, signal?: AbortSignal, voice = readingVoice()) {
+    const body = JSON.stringify({ Text: text, VoiceId: voice.slice('rl:'.length) });
     const once = () => api('/voices', { method: 'POST', body, signal });
     // A busy self-hosted voice server is usually free again a moment later.
     const res = await once().catch((e: unknown) => {
@@ -175,6 +180,12 @@ export function activate(context: vscode.ExtensionContext) {
         ? '$(unmute) ReadLoudly'
         : `${queue.status === 'playing' ? '$(debug-pause)' : '$(play)'} Sentence ${queue.index + 1}/${n}`;
     status.tooltip = controls(queue.status === 'playing', credits);
+    status.accessibilityInformation = {
+      label:
+        queue.status === 'idle'
+          ? 'ReadLoudly, not reading'
+          : `ReadLoudly, ${queue.status}, sentence ${queue.index + 1} of ${n}`,
+    };
   }
 
   function speak() {
@@ -197,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
       token: queue.token,
       text: s.text,
       rate: speed(),
-      voice: isPro() ? '' : voiceName(),
+      voice: isPro() ? '' : readingVoice(),
     });
   }
 
@@ -209,7 +220,8 @@ export function activate(context: vscode.ExtensionContext) {
         : maskPlain(text);
     return capLength(splitSentences(prose.slice(from, to), from), MAX_CHARS);
   }
-  const sentencesOfText = (text: string) => capLength(splitSentences(maskPlain(text)), MAX_CHARS);
+  const sentencesOfText = (text: string, markdown = false) =>
+    capLength(splitSentences(markdown ? maskMarkdown(text, true) : maskPlain(text)), MAX_CHARS);
 
   function read(items: Sentence[], index: number, from: Source) {
     if (!items.length)
@@ -327,7 +339,12 @@ export function activate(context: vscode.ExtensionContext) {
     const mine = (v: { lang: string }) => Number(v.lang.startsWith(lang));
     const byLang = <T extends { lang: string }>(list: T[]) =>
       [...list].sort((a, b) => mine(b) - mine(a) || a.lang.localeCompare(b.lang));
-    type Item = vscode.QuickPickItem & { name?: string; premium?: boolean; signIn?: true };
+    type Item = vscode.QuickPickItem & {
+      name?: string;
+      premium?: boolean;
+      lang?: string;
+      signIn?: true;
+    };
     const separator = (label: string): Item => ({
       label,
       kind: vscode.QuickPickItemKind.Separator,
@@ -349,6 +366,7 @@ export function activate(context: vscode.ExtensionContext) {
               description: v.premium ? 'Premium, 1 credit per character' : 'Standard',
               name: v.name,
               premium: v.premium,
+              lang: v.lang,
             },
           ])
         : [{ label: '$(account) Sign in for ReadLoudly voices', signIn: true as const }]),
@@ -360,7 +378,11 @@ export function activate(context: vscode.ExtensionContext) {
     if (pick?.signIn) return void ((await account.signIn()) && chooseVoice());
     if (pick?.name === undefined) return;
     if (pick.name.startsWith('rl:'))
-      await context.globalState.update(PRO_VOICE, { label: pick.label, premium: pick.premium });
+      await context.globalState.update(PRO_VOICE, {
+        label: pick.label,
+        premium: pick.premium,
+        lang: pick.lang,
+      });
     await cfg().update('voice', pick.name, vscode.ConfigurationTarget.Global);
   }
 
@@ -371,6 +393,150 @@ export function activate(context: vscode.ExtensionContext) {
     // Kokoro names are known before the engine lists device voices, so the lens never shows a raw id.
     const voice = [...kokoroVoices(), ...voices].find((v) => v.name === name);
     return voice?.label ?? (name || 'System voice');
+  };
+
+  // A translation is read by a voice in its language when the chosen one does not speak it.
+  function voiceFor(code: string) {
+    const name = voiceName();
+    const lang = name.startsWith('rl:')
+      ? context.globalState.get<{ lang?: string }>(PRO_VOICE)?.lang
+      : [...kokoroVoices(), ...voices].find((v) => v.name === name)?.lang;
+    const speaks = (l?: string) => !!l && l.toLowerCase().startsWith(code);
+    if (speaks(lang)) return undefined;
+    const match = voices.find((v) => speaks(v.lang))?.name;
+    if (!match)
+      void vscode.window.showInformationMessage(
+        `ReadLoudly: no voice for this language is installed, so your current voice reads it. Add one in your system's speech settings.`
+      );
+    return match;
+  }
+
+  const aiText = new Map<string, string>();
+  const aiChanged = new vscode.EventEmitter<vscode.Uri>();
+  let aiCount = 0;
+  const chatModel = async () =>
+    (await vscode.lm.selectChatModels({ vendor: 'copilot' }))[0] ??
+    (await vscode.lm.selectChatModels())[0];
+  const TITLES: Record<Kind, string> = {
+    summarize: 'Summary',
+    translate: 'Translation',
+    explain: 'Explanation',
+    simplify: 'Simpler version',
+  };
+
+  async function pickLanguage(): Promise<Language | undefined> {
+    const pick = await vscode.window.showQuickPick(
+      LANGUAGES.map(([name, code]) => ({ label: name, description: code, code })),
+      { placeHolder: 'Translate into' }
+    );
+    return pick && { name: pick.label, code: pick.code };
+  }
+
+  // The answer streams into a read-only Markdown document beside the text, then is read aloud with the usual highlight.
+  async function aiAndListen(kind: Kind) {
+    const editor = editorOrWarn();
+    if (!editor) return;
+    const { document: doc, selection } = editor;
+    const text = selection.isEmpty ? doc.getText() : doc.getText(selection);
+    if (!text.trim())
+      return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to send.');
+    const lang = kind === 'translate' ? await pickLanguage() : undefined;
+    if (kind === 'translate' && !lang) return;
+    const model = await chatModel();
+    if (!model) return void vscode.window.showWarningMessage(`ReadLoudly: ${NO_MODEL}`);
+    const title = lang ? `${TITLES[kind]} (${lang.name})` : TITLES[kind];
+    const uri = vscode.Uri.from({ scheme: 'readloudly-ai', path: `/${title} ${++aiCount}.md` });
+    const key = uri.toString();
+    aiText.set(key, '');
+    await vscode.window.showTextDocument(uri, {
+      viewColumn: vscode.ViewColumn.Beside,
+      preserveFocus: true,
+    });
+    let cancelled = false;
+    let shown = 0;
+    try {
+      const out = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `ReadLoudly: writing the ${title.toLowerCase()}`,
+          cancellable: true,
+        },
+        (_, token) => {
+          token.onCancellationRequested(() => (cancelled = true));
+          return ask(
+            model,
+            vscode.LanguageModelChatMessage.User,
+            kind,
+            text,
+            lang?.name,
+            token,
+            (chunk) => {
+              aiText.set(key, aiText.get(key) + chunk);
+              if (Date.now() - shown < 150) return;
+              shown = Date.now();
+              aiChanged.fire(uri);
+            }
+          );
+        }
+      );
+      aiText.set(key, out);
+      aiChanged.fire(uri);
+      if (cancelled || !out.trim()) return;
+      const result = await vscode.workspace.openTextDocument(uri);
+      for (let i = 0; i < 20 && result.getText() !== out; i++)
+        await new Promise((r) => setTimeout(r, 50));
+      read(sentencesOf(result, 0, out.length), 0, { uri, voice: lang && voiceFor(lang.code) });
+    } catch (e) {
+      void vscode.window.showWarningMessage(`ReadLoudly: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  const chatHandler: vscode.ChatRequestHandler = async (request, _context, stream, token) => {
+    const editor = vscode.window.activeTextEditor;
+    const selected =
+      editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : '';
+    const kind = request.command as Kind | 'read' | undefined;
+    if (!kind) {
+      stream.markdown(
+        'Use `/summarize`, `/translate Spanish`, `/explain`, `/simplify` or `/read`, followed by the text. With no text, the editor selection is used.'
+      );
+      return;
+    }
+    const lead = kind === 'translate' ? leadingLanguage(request.prompt) : undefined;
+    if (kind === 'translate' && !lead) {
+      stream.markdown('Start with the language, for example `/translate Spanish`, then the text.');
+      return;
+    }
+    const text = (lead ? lead.rest : request.prompt).trim() || selected;
+    if (!text) {
+      stream.markdown('Type the text after the command, or select it in the editor first.');
+      return;
+    }
+    if (kind === 'read') {
+      read(sentencesOfText(text, true), 0, {});
+      stream.markdown('Reading it aloud now.');
+      stream.button({ command: 'readloudly.stop', title: 'Stop' });
+      return;
+    }
+    try {
+      const out = await ask(
+        request.model,
+        vscode.LanguageModelChatMessage.User,
+        kind,
+        text,
+        lead?.lang.name,
+        token,
+        (c) => stream.markdown(c)
+      );
+      if (out.trim())
+        stream.button({
+          command: 'readloudly.listenText',
+          title: 'Listen',
+          arguments: [out, lead?.lang.code],
+        });
+    } catch (e) {
+      stream.markdown(e instanceof Error ? e.message : String(e));
+    }
   };
 
   // Controls sit above the line the user clicked, so reading starts and steers right where they look.
@@ -427,7 +593,7 @@ export function activate(context: vscode.ExtensionContext) {
   async function exportMp3() {
     const editor = editorOrWarn();
     if (!editor) return;
-    if (!isPro()) {
+    if (!isPro(voiceName())) {
       const pick = await vscode.window.showInformationMessage(
         'ReadLoudly: MP3 export uses a ReadLoudly voice. Choose one first.',
         'Choose Voice'
@@ -468,7 +634,7 @@ export function activate(context: vscode.ExtensionContext) {
               message: `${i + 1} of ${texts.length}`,
               increment: 100 / texts.length,
             });
-            parts.push(new Uint8Array(await clip(text, abort.signal)));
+            parts.push(new Uint8Array(await clip(text, abort.signal, voiceName())));
           }
           await vscode.workspace.fs.writeFile(target, Buffer.concat(parts));
           return true;
@@ -487,6 +653,30 @@ export function activate(context: vscode.ExtensionContext) {
         `ReadLoudly: the MP3 was not saved. ${action === 'device' ? 'ReadLoudly could not be reached.' : message}`
       );
     }
+  }
+
+  // The same deep links as the Chrome extension; a local PDF cannot travel in a URL, so it is uploaded on the web.
+  async function openInWeb(uri?: vscode.Uri) {
+    const open = (path: string) => vscode.env.openExternal(vscode.Uri.parse(`${webUrl()}${path}`));
+    if (uri?.path.toLowerCase().endsWith('.pdf')) {
+      await open('/dashboard/');
+      return void vscode.window.showInformationMessage(
+        `ReadLoudly: upload ${uri.path.split('/').pop()} on the dashboard that just opened.`
+      );
+    }
+    const editor = editorOrWarn();
+    if (!editor) return;
+    const { document: doc, selection } = editor;
+    const text = (selection.isEmpty ? doc.getText() : doc.getText(selection)).trim();
+    if (/^https?:\/\/\S+$/.test(text))
+      return void open(`/dashboard/?url=${encodeURIComponent(text)}`);
+    if (!text)
+      return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to open.');
+    await open(`/viewer/tts/d/?text=${encodeURIComponent(text.slice(0, 2000))}`);
+    if (text.length > 2000)
+      void vscode.window.showInformationMessage(
+        'ReadLoudly: the web reader got the first 2,000 characters. Upload the file there to read all of it.'
+      );
   }
 
   const restartIfPlaying = () => {
@@ -565,6 +755,13 @@ export function activate(context: vscode.ExtensionContext) {
       void vscode.window.showInformationMessage('ReadLoudly: signed out.');
     },
     exportMp3,
+    openInWeb,
+    summarizeAndListen: () => aiAndListen('summarize'),
+    translateAndListen: () => aiAndListen('translate'),
+    explainAndListen: () => aiAndListen('explain'),
+    simplifyAndListen: () => aiAndListen('simplify'),
+    listenText: (text: string, code?: string) =>
+      read(sentencesOfText(text, true), 0, { voice: code && voiceFor(code) }),
     statusClick: () => (!view || queue.status === 'idle' ? showPlayer() : togglePause()),
   };
 
@@ -577,6 +774,26 @@ export function activate(context: vscode.ExtensionContext) {
     wordDecoration,
     lensChanged,
     vscode.languages.registerCodeLensProvider({ scheme: '*' }, lineControls),
+    aiChanged,
+    vscode.workspace.registerTextDocumentContentProvider('readloudly-ai', {
+      onDidChange: aiChanged.event,
+      provideTextDocumentContent: (uri) => aiText.get(uri.toString()) ?? '',
+    }),
+    vscode.chat.createChatParticipant('readloudly.reader', chatHandler),
+    // Read-only for the agent: the tool only speaks the text it is given.
+    vscode.lm.registerTool<{ text: string }>('readloudly_read_aloud', {
+      invoke: ({ input }) => {
+        const items = sentencesOfText(input.text ?? '', true);
+        if (items.length) read(items, 0, {});
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(
+            items.length
+              ? 'ReadLoudly is reading the text aloud to the user.'
+              : 'There was no readable text.'
+          ),
+        ]);
+      },
+    }),
     account,
     vscode.authentication.registerAuthenticationProvider('readloudly', 'ReadLoudly', account),
     account.onDidChangeSessions(() => {

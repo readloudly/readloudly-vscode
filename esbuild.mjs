@@ -30,7 +30,7 @@ const builds = [
   },
   {
     ...common,
-    entryPoints: ['test/integration/extension.test.ts', 'test/integration/pro.test.ts'],
+    entryPoints: ['test/integration/*.test.ts'],
     outdir: 'dist/test',
     platform: 'node',
     format: 'cjs',

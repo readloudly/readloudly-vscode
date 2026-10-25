@@ -1,7 +1,7 @@
 {
   "name": "readloudly-vscode",
   "displayName": "ReadLoudly: Read Aloud",
-  "description": "Listen to any text in VS Code with the spoken sentence highlighted. Device voices are free and never send text anywhere.",
+  "description": "Listen to any text in VS Code with the spoken sentence highlighted. Free device voices never send text anywhere; ReadLoudly voices and AI summaries are optional.",
   "version": "0.1.0",
   "publisher": "readloudly",
   "license": "MIT",
@@ -154,6 +154,36 @@
         "command": "readloudly.signOut",
         "title": "Sign Out",
         "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.summarizeAndListen",
+        "title": "Summarize and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.translateAndListen",
+        "title": "Translate and Listen…",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.explainAndListen",
+        "title": "Explain and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.simplifyAndListen",
+        "title": "Simplify and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.listenText",
+        "title": "Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.openInWeb",
+        "title": "Open in ReadLoudly Web",
+        "category": "ReadLoudly"
       }
     ],
     "menus": {
@@ -175,6 +205,14 @@
         {
           "command": "readloudly.exportMp3",
           "group": "readloudly@4"
+        },
+        {
+          "submenu": "readloudly.ai",
+          "group": "readloudly@5"
+        },
+        {
+          "command": "readloudly.openInWeb",
+          "group": "readloudly@6"
         }
       ],
       "commandPalette": [
@@ -185,6 +223,35 @@
         {
           "command": "readloudly.cycleSpeed",
           "when": "false"
+        },
+        {
+          "command": "readloudly.listenText",
+          "when": "false"
+        }
+      ],
+      "readloudly.ai": [
+        {
+          "command": "readloudly.summarizeAndListen",
+          "group": "ai@1"
+        },
+        {
+          "command": "readloudly.translateAndListen",
+          "group": "ai@2"
+        },
+        {
+          "command": "readloudly.explainAndListen",
+          "group": "ai@3"
+        },
+        {
+          "command": "readloudly.simplifyAndListen",
+          "group": "ai@4"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "readloudly.openInWeb",
+          "when": "resourceExtname == .pdf",
+          "group": "navigation@90"
         }
       ]
     },
@@ -343,6 +410,107 @@
         "id": "readloudly",
         "label": "ReadLoudly"
       }
+    ],
+    "submenus": [
+      {
+        "id": "readloudly.ai",
+        "label": "ReadLoudly AI"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "readloudly.reader",
+        "name": "readloudly",
+        "fullName": "ReadLoudly",
+        "description": "Summarize, translate, explain or simplify text, then listen to it",
+        "commands": [
+          {
+            "name": "summarize",
+            "description": "Summarize the text or selection"
+          },
+          {
+            "name": "translate",
+            "description": "Translate into a language, for example /translate Spanish"
+          },
+          {
+            "name": "explain",
+            "description": "Explain code or prose in plain words"
+          },
+          {
+            "name": "simplify",
+            "description": "Rewrite at a simpler reading level"
+          },
+          {
+            "name": "read",
+            "description": "Read the text or selection aloud"
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "readloudly_read_aloud",
+        "displayName": "Read Aloud",
+        "toolReferenceName": "readAloud",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "Read text aloud to you with ReadLoudly.",
+        "modelDescription": "Reads the given text aloud to the user with the ReadLoudly voice they chose, highlighting nothing in the editor. Use it when the user asks to hear text, an answer or a summary. It has no side effects beyond audio.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The plain text or Markdown to read aloud."
+            }
+          },
+          "required": [
+            "text"
+          ]
+        }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "readloudly.start",
+        "title": "Get started with ReadLoudly",
+        "description": "Listen to code, docs and answers in three steps.",
+        "steps": [
+          {
+            "id": "read",
+            "title": "Read a selection",
+            "description": "Select text and press the shortcut, or click a line.\n[Read the selection](command:readloudly.readSelection)",
+            "media": {
+              "markdown": "media/walkthrough/read.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.readSelection",
+              "onCommand:readloudly.readFromLine"
+            ]
+          },
+          {
+            "id": "voice",
+            "title": "Choose a voice",
+            "description": "Pick a device voice, a Kokoro voice or a ReadLoudly voice.\n[Choose a voice](command:readloudly.chooseVoice)",
+            "media": {
+              "markdown": "media/walkthrough/voice.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.chooseVoice"
+            ]
+          },
+          {
+            "id": "pro",
+            "title": "Sign in for ReadLoudly voices",
+            "description": "Optional: natural cloud voices and MP3 export.\n[Sign in](command:readloudly.signIn)",
+            "media": {
+              "markdown": "media/walkthrough/pro.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.signIn"
+            ]
+          }
+        ]
+      }
     ]
   },
   "scripts": {
@@ -382,5 +550,10 @@
   },
   "dependencies": {
     "kokoro-js": "1.2.1"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#2D5CD2",
+    "theme": "dark"
   }
 }
