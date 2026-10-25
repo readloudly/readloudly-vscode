@@ -5,10 +5,15 @@ interface Api {
   highlighted(): vscode.Range[];
   status(): string;
   boots(): number;
-  clickLine(uri: vscode.Uri, line: number): void;
+  clickLine(uri: vscode.Uri, line: number, selected?: boolean): void;
 }
 
 const run = (id: string) => vscode.commands.executeCommand(`readloudly.${id}`);
+const plain = (title: string) =>
+  title
+    .replace(/\u200b/g, '')
+    .trim()
+    .replace(/\u2002/g, ' ');
 
 suite('ReadLoudly free reader', () => {
   let api: Api;
@@ -95,7 +100,7 @@ suite('ReadLoudly free reader', () => {
       'vscode.executeCodeLensProvider',
       doc.uri
     );
-    assert.equal(playing[0]!.command!.title, '▶️ Resume');
+    assert.equal(plain(playing[0]!.command!.title), '▶️ Resume');
   });
 
   test('selecting text shows a Read selection button above it', async () => {
@@ -108,8 +113,8 @@ suite('ReadLoudly free reader', () => {
       doc.uri
     );
     assert.deepEqual(
-      [first!.command!.title, first!.command!.command],
-      ['🔊 Read selection', 'readloudly.readSelection']
+      [plain(first!.command!.title), first!.command!.command],
+      ['▶️ Listen to selection', 'readloudly.readSelection']
     );
     await vscode.commands.executeCommand(first!.command!.command);
     assert.notEqual(api.status(), 'idle');

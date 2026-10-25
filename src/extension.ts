@@ -239,14 +239,14 @@ export function activate(context: vscode.ExtensionContext) {
       const range = doc.lineAt(line).range;
       const lens = (title: string, command: string, tooltip: string, args?: unknown[]) =>
         new vscode.CodeLens(range, {
-          title,
+          // En spaces give each control room and a wider click target; the zero-width spaces stop VS Code trimming them.
+          title: `\u200b\u2002${title.replace(' ', '\u2002')}\u2002\u200b`,
           tooltip,
           command: `readloudly.${command}`,
           arguments: args,
         });
       const live = queue.status === 'playing' || queue.status === 'paused';
-      // Emoji are the only colored glyphs a CodeLens can draw; codicons and text take one theme color.
-      const pace = speed() < 1 ? '🐢' : speed() > 1 ? '🐇' : '⏱️';
+      // Emoji are the only colored glyphs a CodeLens can draw; the media-control set keeps one visual family.
       return [
         ...(live
           ? [
@@ -258,11 +258,9 @@ export function activate(context: vscode.ExtensionContext) {
               lens('⏹️', 'stop', 'Stop reading'),
             ]
           : lensLine.selected
-            ? [lens('🔊 Read selection', 'readSelection', 'Read the selected text aloud')]
-            : [
-                lens('🔊 Read aloud', 'readFromLine', 'Read aloud from this line', [doc.uri, line]),
-              ]),
-        lens(`${pace} ${speed()}×`, 'cycleSpeed', 'Change speed'),
+            ? [lens('▶️ Listen to selection', 'readSelection', 'Read the selected text aloud')]
+            : [lens('▶️ Listen', 'readFromLine', 'Read aloud from this line', [doc.uri, line])]),
+        lens(`⏩ ${speed()}×`, 'cycleSpeed', 'Change speed'),
         lens(`🎙️ ${voiceLabel().replace(/ \(.*\)$/, '')}`, 'chooseVoice', 'Choose voice'),
       ];
     },
