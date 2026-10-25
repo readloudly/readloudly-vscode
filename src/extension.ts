@@ -1,13 +1,6 @@
 import * as vscode from 'vscode';
 import { Queue } from './player/queue.ts';
-import {
-  createPanel,
-  floatPanel,
-  renderPanel,
-  VIEW_TYPE,
-  type FromWebview,
-  type Voice,
-} from './player/panel.ts';
+import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
 import { splitSentences, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
@@ -27,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
   let source: Source = { label: '' };
   let resumeAt: number | undefined;
   let voices: Voice[] = [];
-  let panel: vscode.WebviewPanel | undefined;
+  let view: vscode.WebviewView | undefined;
   let highlighted: vscode.Range[] = [];
   let boots = 0;
   let decoration = makeDecoration();
@@ -40,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
   }
 
-  const post = (message: ToWebview) => void panel?.webview.postMessage(message);
+  const post = (message: ToWebview) => void view?.webview.postMessage(message);
   const speed = () => cfg().get<number>('speed', 1);
   const sourceEditors = () =>
     vscode.window.visibleTextEditors.filter(
@@ -65,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
       queue.status === 'idle'
         ? '$(unmute) ReadLoudly'
         : `${queue.status === 'playing' ? '$(debug-pause)' : '$(play)'} Sentence ${queue.index + 1}/${n}`;
-    status.tooltip = queue.status === 'playing' ? 'ReadLoudly: pause' : 'ReadLoudly: play';
+    status.tooltip = controls(queue.status === 'playing');
     const words = queue.items
       .slice(queue.index)
       .reduce((sum, x) => sum + x.text.split(' ').length, 0);
@@ -87,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
     sync();
     const s = queue.current;
     if (queue.status !== 'playing' || !s) return post({ type: 'cancel' });
-    if (!panel) return void showPlayer();
+    if (!view) return void showPlayer();
     if (cfg().get<boolean>('followAlong', true)) {
       for (const editor of sourceEditors()) {
         const range = new vscode.Range(
@@ -147,21 +140,22 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   async function showPlayer() {
-    if (panel) return panel.reveal(panel.viewColumn, true);
+    if (view) return view.show(true);
+    // The view's webview is the speech engine, so it must be resolved once; focus returns to the text after.
     const back = vscode.window.activeTextEditor;
-    adopt(createPanel(context.extensionUri));
-    await floatPanel(panel!, back);
+    await vscode.commands.executeCommand(`${VIEW_TYPE}.focus`);
+    if (back) await vscode.window.showTextDocument(back.document, back.viewColumn);
   }
 
-  function adopt(p: vscode.WebviewPanel) {
-    panel = p;
-    renderPanel(p, context.extensionUri);
-    p.onDidDispose(() => {
-      panel = undefined;
+  function adopt(v: vscode.WebviewView) {
+    view = v;
+    renderPlayer(v.webview, context.extensionUri);
+    v.onDidDispose(() => {
+      view = undefined;
       if (queue.status === 'playing') queue.pause();
       sync();
     });
-    p.webview.onDidReceiveMessage((m: FromWebview) => {
+    v.webview.onDidReceiveMessage((m: FromWebview) => {
       if (m.type === 'boot') {
         boots++;
         speak();
@@ -178,15 +172,10 @@ export function activate(context: vscode.ExtensionContext) {
         );
       } else if (m.type === 'voice')
         void cfg().update('voice', m.name, vscode.ConfigurationTarget.Global);
-      else if (m.type === 'cmd') {
-        if (m.cmd === 'close') {
-          queue.stop();
-          p.dispose();
-        } else
-          void vscode.commands.executeCommand(
-            `readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`
-          );
-      }
+      else if (m.type === 'cmd')
+        void vscode.commands.executeCommand(
+          `readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`
+        );
     });
   }
 
@@ -285,7 +274,7 @@ export function activate(context: vscode.ExtensionContext) {
     slower: () => setSpeed(-1),
     chooseVoice,
     showPlayer,
-    statusClick: () => (!panel || queue.status === 'idle' ? showPlayer() : togglePause()),
+    statusClick: () => (!view || queue.status === 'idle' ? showPlayer() : togglePause()),
   };
 
   status.command = 'readloudly.statusClick';
@@ -297,9 +286,11 @@ export function activate(context: vscode.ExtensionContext) {
     ...Object.entries(commands).map(([id, run]) =>
       vscode.commands.registerCommand(`readloudly.${id}`, run)
     ),
-    vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
-      deserializeWebviewPanel: async (p) => (panel ? p.dispose() : adopt(p)),
-    }),
+    vscode.window.registerWebviewViewProvider(
+      VIEW_TYPE,
+      { resolveWebviewView: adopt },
+      { webviewOptions: { retainContextWhenHidden: true } }
+    ),
     vscode.window.onDidChangeVisibleTextEditors(sync),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('readloudly.highlightColor')) {
@@ -327,6 +318,26 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   return { highlighted: () => highlighted, status: () => queue.status, boots: () => boots };
+}
+
+// Hovering the status bar item shows a mini player, so the full view can stay closed.
+function controls(playing: boolean) {
+  const md = new vscode.MarkdownString(
+    [
+      '[$(debug-step-back)](command:readloudly.previous "Previous sentence")',
+      `[$(${playing ? 'debug-pause' : 'play'})](command:readloudly.togglePause "${playing ? 'Pause' : 'Play'}")`,
+      '[$(debug-step-over)](command:readloudly.next "Next sentence")',
+      '[$(debug-stop)](command:readloudly.stop "Stop")',
+      '[$(unmute) Player](command:readloudly.showPlayer "Show the player")',
+    ].join('&nbsp;&nbsp;'),
+    true
+  );
+  md.isTrusted = {
+    enabledCommands: ['previous', 'togglePause', 'next', 'stop', 'showPlayer'].map(
+      (c) => `readloudly.${c}`
+    ),
+  };
+  return md;
 }
 
 export function deactivate() {}

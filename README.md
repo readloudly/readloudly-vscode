@@ -14,8 +14,9 @@ Also in the Command Palette: Read File, Read from Cursor, Read Clipboard, Stop, 
 Previous Sentence, Faster, Slower, Choose Voice and Show Player. Read Selection, Read from Cursor
 and Read File are in the editor's right-click menu too.
 
-The player opens in a small window that stays on top; move it by its top bar. Closing it pauses
-reading, and the ReadLoudly item in the status bar brings it back.
+The player is the **ReadLoudly** tab in the bottom panel, next to Terminal. Drag the tab to the
+side bar or anywhere else VS Code allows; reading carries on while the panel is hidden. Hover the
+ReadLoudly item in the status bar for previous, play/pause, next and stop without opening it.
 
 Markdown is read as prose: headings and list items are read on their own, link text is read but
 URLs are not, and code blocks are skipped (setting `readloudly.skipCodeBlocks`). In a Jupyter
@@ -43,8 +44,8 @@ notebook, put the cursor in a Markdown cell and run Read File.
 ## Known limits
 
 - Tested on macOS with VS Code 1.143. Windows and Linux device voices are not verified yet.
-- The floating window needs VS Code 1.100 or later; elsewhere the player opens as a tab.
-- VS Code does not let a window go below 400 × 270, so the player window cannot be smaller.
+- VS Code does not let extensions draw over the editor, so the player cannot float on top of your
+  code the way the ReadLoudly Chrome extension floats on a web page.
 
 ## Development
 

@@ -14,42 +14,16 @@ export type FromWebview =
   | { type: 'voices'; voices: Voice[] }
   | { type: 'ended'; token: number }
   | { type: 'error'; token: number; error: string }
-  | { type: 'cmd'; cmd: 'toggle' | 'next' | 'previous' | 'stop' | 'faster' | 'slower' | 'close' }
+  | { type: 'cmd'; cmd: 'toggle' | 'next' | 'previous' | 'stop' | 'faster' | 'slower' }
   | { type: 'voice'; name: string };
 
-const FLOAT_COMMANDS = [
-  'workbench.action.moveEditorToNewWindow',
-  'workbench.action.enableCompactAuxiliaryWindow',
-  'workbench.action.enableWindowAlwaysOnTop',
-];
-
-export function createPanel(extensionUri: vscode.Uri): vscode.WebviewPanel {
-  return vscode.window.createWebviewPanel(VIEW_TYPE, 'ReadLoudly', vscode.ViewColumn.Active, {
-    enableScripts: true,
-    retainContextWhenHidden: true,
-    localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
-  });
-}
-
-export function renderPanel(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-  panel.webview.options = {
+export function renderPlayer(webview: vscode.Webview, extensionUri: vscode.Uri) {
+  webview.options = {
     enableScripts: true,
     localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
   };
-  const script = panel.webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'media', 'player.js')
-  );
-  panel.webview.html = html(randomBytes(16).toString('base64'), script.toString());
-}
-
-// Moves the active panel into its own compact, always-on-top window, then gives focus back to the text.
-export async function floatPanel(panel: vscode.WebviewPanel, back: vscode.TextEditor | undefined) {
-  panel.reveal(panel.viewColumn, false);
-  for (const id of FLOAT_COMMANDS) {
-    // Editors without these commands (VS Code before 1.100, some forks) keep the player as a tab.
-    await vscode.commands.executeCommand(id).then(undefined, () => undefined);
-  }
-  if (back) await vscode.window.showTextDocument(back.document, back.viewColumn);
+  const script = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'player.js'));
+  webview.html = html(randomBytes(16).toString('base64'), script.toString());
 }
 
 const icon = (body: string) =>
@@ -70,7 +44,7 @@ function html(nonce: string, script: string): string {
     <button class="chip" id="speed" type="button" aria-label="Playback speed" title="Speed: click for faster, Shift+click for slower">${icon('<path d="M3.5 16.5a8.5 8.5 0 0 1 17 0"/><path id="needle" d="M12 16.5V10.8"/>')}<span id="speed-t">1×</span></button>
     <span class="time" id="time" title="Time left at this speed"></span>
     <span class="grow"></span>
-    <button class="ib" id="close" type="button" aria-label="Stop and close" title="Stop and close">${icon('<path d="M18 6 6 18M6 6l12 12"/>')}</button>
+    <button class="ib" id="stop" type="button" aria-label="Stop" title="Stop">${icon('<rect x="6" y="6" width="12" height="12" rx="2"/>')}</button>
   </div>
   <div class="track" aria-hidden="true"><i id="track"></i></div>
   <div class="row"><span id="pos"></span><span id="file"></span></div>

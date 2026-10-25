@@ -97,7 +97,7 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
 
 const cmd = (c: Extract<FromWebview, { type: 'cmd' }>['cmd']) =>
   api.postMessage({ type: 'cmd', cmd: c });
-for (const id of ['toggle', 'previous', 'next', 'close'] as const)
+for (const id of ['toggle', 'previous', 'next', 'stop'] as const)
   $(id).addEventListener('click', () => cmd(id));
 $('speed').addEventListener('click', (e) => cmd(e.shiftKey ? 'slower' : 'faster'));
 $<HTMLSelectElement>('voice').addEventListener('change', (e) =>

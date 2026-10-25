@@ -24,9 +24,7 @@
     "markdown"
   ],
   "main": "./dist/extension.js",
-  "activationEvents": [
-    "onWebviewPanel:readloudly.player"
-  ],
+  "activationEvents": [],
   "contributes": {
     "keybindings": [
       {
@@ -41,6 +39,24 @@
         "mac": "ctrl+shift+cmd+space"
       }
     ],
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "readloudly",
+          "title": "ReadLoudly",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "readloudly": [
+        {
+          "type": "webview",
+          "id": "readloudly.player",
+          "name": "Player"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "readloudly.readSelection",

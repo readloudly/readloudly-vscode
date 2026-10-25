@@ -42,7 +42,7 @@ suite('ReadLoudly free reader', () => {
     assert.deepEqual(lit(), ['ReadLoudly reads this file aloud.']);
   });
 
-  test('the floating player loads its page', async () => {
+  test('the player view loads its page', async () => {
     for (let i = 0; i < 50 && api.boots() === 0; i++) await new Promise((r) => setTimeout(r, 200));
     assert.ok(api.boots() > 0, 'the player webview never sent boot');
   });

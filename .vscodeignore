@@ -1,6 +1,7 @@
 **
 !dist/extension.js
 !media/player.js
+!media/icon.svg
 !package.json
 !README.md
 !LICENSE
