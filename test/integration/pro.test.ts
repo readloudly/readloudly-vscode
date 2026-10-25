@@ -5,6 +5,7 @@ interface Api {
   status(): string;
   testSession(s: { access: string; email: string }): Thenable<void>;
   testDisclosed(): Thenable<void>;
+  sent(): { type: string; text?: string; voice?: string }[];
 }
 
 interface Call {
@@ -67,6 +68,7 @@ suite('ReadLoudly voices', () => {
   });
 
   test('a file matching neverSendGlobs is never sent, the device voice reads it', async () => {
+    const from = api.sent().length;
     await select('server.pem', 0);
     await run('readSelection');
     await new Promise((r) => setTimeout(r, 500));
@@ -74,14 +76,27 @@ suite('ReadLoudly voices', () => {
       calls.map((c) => c.method + ' ' + c.url),
       []
     );
-    assert.notEqual(api.status(), 'idle');
+    const engine = api.sent().slice(from);
+    assert.ok(!engine.some((m) => m.type === 'play'), 'a ReadLoudly clip was played');
+    const speak = engine.find((m) => m.type === 'speak');
+    assert.equal(
+      speak?.text,
+      'This file stands in for a private key, so ReadLoudly must never send it.'
+    );
+    assert.equal(speak?.voice, '');
     await run('stop');
   });
 
   test('a ReadLoudly voice sends the token only to the user-level API, never a workspace one', async () => {
+    const from = api.sent().length;
     await select('sample.md', 2);
     await run('readSelection');
-    await until(() => clipCalls().length > 0);
+    await until(() =>
+      api
+        .sent()
+        .slice(from)
+        .some((m) => m.type === 'play')
+    );
     const [first] = clipCalls();
     assert.ok(first, 'no clip was requested');
     assert.equal(first.url, 'https://api.readloudly.com/voices');
@@ -90,6 +105,13 @@ suite('ReadLoudly voices', () => {
       Text: 'ReadLoudly reads this file aloud.',
       VoiceId: 'voice-1',
     });
+    assert.ok(
+      api
+        .sent()
+        .slice(from)
+        .some((m) => m.type === 'play'),
+      'the clip never reached the player'
+    );
     await run('stop');
   });
 });

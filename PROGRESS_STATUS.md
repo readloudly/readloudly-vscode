@@ -39,3 +39,8 @@
 
 - Fixed: apiUrl/webUrl application scope (workspace could redirect the token; regression test with hostile fixture), neverSendGlobs now also blocks AI, chat selection and Open in Web, MP3 export capped at 10,000 chars, "Use a Standard Voice" action, chat icon. Icon = frontend favicon logo (logo-icon-black-box-color-white-theme).
 - Open: README GIF (private repo breaks Marketplace images), screen-reader pause, Marketplace/Open VSX publish (owner), Windows/Linux/Cursor/Windsurf, real backend + Copilot runs.
+
+## 2026-10-26 reviewer findings closed
+
+- Fixed: voice/neverSendGlobs application scope, agent tool never uses Pro, refresh keeps the session on 5xx, clip cache prune + eviction race, stale index after gate, 8 s speech watchdog, clipboard try/finally, AI notice, Kokoro pinned to HF 1939ad2a (esbuild PINS), player.js.map untracked, sharp override 0.35.5.
+- Tests assert on engine messages (`sent()`); fetch spy counts only extension calls. 54 unit, 14 integration on macOS + Linux. Dev-only audit highs remain (vsce msal, mocha diff/serialize-javascript).

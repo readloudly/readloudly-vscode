@@ -52,7 +52,13 @@ export function activate(context: vscode.ExtensionContext) {
     });
   }
 
-  const post = (message: ToWebview) => void view?.webview.postMessage(message);
+  // Integration tests read what the engine was asked to play; nothing is kept outside the test runner.
+  const sent: ToWebview[] | undefined =
+    context.extensionMode === vscode.ExtensionMode.Test ? [] : undefined;
+  const post = (message: ToWebview) => {
+    sent?.push(message);
+    void view?.webview.postMessage(message);
+  };
   const speed = () => cfg().get<number>('speed', 1);
   const voiceName = () => cfg().get<string>('voice', '');
   const readingVoice = () => source.voice ?? voiceName();
@@ -117,7 +123,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   async function speakPro(token: number) {
     const items = queue.items.map((s) => s.text);
-    const index = queue.index;
     const doc = vscode.workspace.textDocuments.find(
       (d) => d.uri.toString() === source.uri?.toString()
     );
@@ -127,6 +132,9 @@ export function activate(context: vscode.ExtensionContext) {
         if (token === queue.token) speak();
         return;
       }
+      // Next pressed while the notice was open: only the sentence the reader is on now is fetched.
+      if (token !== queue.token) return;
+      const index = queue.index;
       const audio = await clips.get(items, index);
       if (token === queue.token && queue.status === 'playing')
         post({ type: 'play', token, audio, rate: speed(), chars: items[index]!.length });
@@ -299,9 +307,12 @@ export function activate(context: vscode.ExtensionContext) {
       } else if (m.type === 'error' && m.token === queue.token) {
         queue.pause();
         sync();
-        void vscode.window.showWarningMessage(
-          `ReadLoudly: the voice stopped (${m.error}). Press play to try again.`
-        );
+        void vscode.window
+          .showWarningMessage(
+            `ReadLoudly: the voice stopped (${m.error}). Press play to try again.`,
+            'Choose Voice'
+          )
+          .then((pick) => pick && chooseVoice());
       } else if (m.type === 'cmd') void vscode.commands.executeCommand('readloudly.togglePause');
     });
   }
@@ -356,11 +367,13 @@ export function activate(context: vscode.ExtensionContext) {
       kind: vscode.QuickPickItemKind.Separator,
     });
     const items: Item[] = [
-      separator('Device voices, free and offline'),
+      separator('Device voices, free, text stays on this computer'),
       { label: 'System default', name: '' },
       ...byLang(voices).map((v) => ({
         label: v.label ?? v.name,
-        description: v.lang,
+        description: v.name.startsWith('kokoro:')
+          ? `${v.lang}, downloads a voice model once`
+          : v.lang,
         name: v.name,
       })),
       separator('ReadLoudly voices, sends the text to ReadLoudly'),
@@ -451,6 +464,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (kind === 'translate' && !lang) return;
     const model = await chatModel();
     if (!model) return void vscode.window.showWarningMessage(`ReadLoudly: ${NO_MODEL}`);
+    if (!(await disclosed(context.globalState, 'ai'))) return;
     const title = lang ? `${TITLES[kind]} (${lang.name})` : TITLES[kind];
     const uri = vscode.Uri.from({ scheme: 'readloudly-ai', path: `/${title} ${++aiCount}.md` });
     const key = uri.toString();
@@ -726,10 +740,14 @@ export function activate(context: vscode.ExtensionContext) {
     readFocused: async (copy = 'editor.action.clipboardCopyAction') => {
       // ponytail: text clipboards only; an image on the clipboard is replaced by the restored text.
       const saved = await vscode.env.clipboard.readText();
-      await vscode.env.clipboard.writeText('');
-      await vscode.commands.executeCommand(copy);
-      const text = await vscode.env.clipboard.readText();
-      await vscode.env.clipboard.writeText(saved);
+      let text: string;
+      try {
+        await vscode.env.clipboard.writeText('');
+        await vscode.commands.executeCommand(copy);
+        text = await vscode.env.clipboard.readText();
+      } finally {
+        await vscode.env.clipboard.writeText(saved);
+      }
       if (!text.trim())
         return void vscode.window.showInformationMessage(
           'ReadLoudly: select some text first, then press the shortcut again.'
@@ -802,7 +820,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.lm.registerTool<{ text: string }>('readloudly_read_aloud', {
       invoke: ({ input }) => {
         const items = sentencesOfText(input.text ?? '', true);
-        if (items.length) read(items, 0, {});
+        // An agent can pass any file's text, so it is never sent to ReadLoudly: a Pro choice reads with the device voice.
+        if (items.length) read(items, 0, { voice: isPro(voiceName()) ? '' : undefined });
         return new vscode.LanguageModelToolResult([
           new vscode.LanguageModelTextPart(
             items.length
@@ -891,7 +910,11 @@ export function activate(context: vscode.ExtensionContext) {
     ...(context.extensionMode === vscode.ExtensionMode.Test && {
       testSession: (s: { access: string; refresh?: string; email: string }) =>
         context.secrets.store('readloudly.session', JSON.stringify(s)),
-      testDisclosed: () => context.globalState.update('readloudly.disclosed', true),
+      testDisclosed: async () => {
+        await context.globalState.update('readloudly.disclosed', true);
+        await context.globalState.update('readloudly.disclosedAi', true);
+      },
+      sent: () => sent ?? [],
     }),
   };
 }

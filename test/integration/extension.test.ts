@@ -24,8 +24,9 @@ suite('ReadLoudly free reader', () => {
   const lit = () => api.highlighted().map((r) => doc.getText(r));
 
   suiteSetup(async () => {
+    // VS Code's own services share this fetch, so only calls made from the extension bundle count.
     globalThis.fetch = ((...args: Parameters<typeof fetch>) => {
-      fetches++;
+      if (new Error().stack?.includes('/dist/extension.js')) fetches++;
       return realFetch(...args);
     }) as typeof fetch;
     api = (await vscode.extensions.getExtension('readloudly.readloudly-vscode')!.activate()) as Api;

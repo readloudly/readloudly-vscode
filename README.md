@@ -4,6 +4,8 @@ Listen to code comments, docs, Markdown and AI answers in VS Code, with the spok
 word highlighted in the editor. Device voices are free, need no account and never send text
 anywhere.
 
+![ReadLoudly reading a Markdown file aloud, with the spoken sentence highlighted](media/demo.gif)
+
 ## Use it
 
 Click any line, or select text: the player appears right above it with **Listen**, **Pause**,
@@ -29,7 +31,8 @@ Read File.
 
 - **Device voices**: your operating system's voices. Free and offline.
 - **Kokoro voices**: a natural neural voice that runs on your own CPU or GPU. The model downloads
-  once from the Hugging Face CDN the first time you choose it; your text never leaves the machine.
+  once from the Hugging Face CDN (a fixed version) the first time you choose it; your text never
+  leaves the machine.
 - **ReadLoudly voices**: cloud voices from your ReadLoudly account. Sign in from the voice picker or
   with **ReadLoudly: Sign In**. They use your ReadLoudly credits, and **Export as MP3** saves a
   selection or file as an audio file.
@@ -74,9 +77,11 @@ say so and the rest of the extension works as before.
   on ReadLoudly's servers by its text and voice, and that cache is shared: anyone who reads the
   same text with the same voice gets the cached audio. Files matching `readloudly.neverSendGlobs`
   (`.env`, `.pem`, `.key`, `id_rsa`, `*secret*`, `.p12` by default) are never sent; the device voice
-  reads them instead.
+  reads them instead. This list, the voice and the API address are user settings only, so a cloned
+  repository's workspace settings cannot change them.
 - **AI commands** send the selection or file to the language model you use in VS Code, under that
-  model's own terms. VS Code asks for your permission the first time.
+  model's own terms. You see a notice the first time, VS Code asks for your permission, and files
+  on the never-send list are never sent to the model either.
 - **Open in ReadLoudly Web** puts up to 2,000 characters of the selection in the web address it
   opens.
 - Your sign-in is kept in VS Code's secret storage, never in settings or logs. The extension
@@ -84,8 +89,8 @@ say so and the rest of the extension works as before.
 
 ## Known limits
 
-- Verified on macOS with VS Code 1.143 and Antigravity. Windows and Linux voices, Cursor and
-  Windsurf are not verified yet.
+- Verified on macOS with VS Code 1.143 and Antigravity; the test suite also passes on Linux.
+  Windows, Linux voices, Cursor and Windsurf are not verified yet.
 - VS Code does not let extensions draw over the editor, so the controls live in a row above the
   line instead of a floating player.
 - Sign-in is email and password; Google sign-in is not supported yet.

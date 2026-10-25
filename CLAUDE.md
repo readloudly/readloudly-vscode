@@ -21,7 +21,7 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 
 ## Status (2026-10-26)
 
-- M0 engine spike: macOS done (`docs/engine-spike.md`); Antigravity IDE checked; Linux tests pass (voices unchecked); Windows, Cursor, Windsurf open.
+- M0 engine spike: macOS done (`docs/engine-spike.md`); Antigravity IDE checked; Linux tests pass in Docker (voices unchecked); Windows, Cursor, Windsurf open.
 - M1 to M4 built on `feat/m1-free-reader`: CodeLens player above the clicked line/selection, read-anywhere
   shortcut (copies the focused selection), Kokoro on-device voices; ReadLoudly voices (email sign-in, SecretStorage,
   never-send globs, notice, credits, MP3 export); `vscode.lm` AI actions, `@readloudly`, `readloudly_read_aloud` tool;
@@ -48,6 +48,10 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 - **Launching VS Code from a shell inside VS Code** inherits `ELECTRON_RUN_AS_NODE=1` (VS Code starts
   as plain Node and exits) and a long `--user-data-dir` breaks the IPC socket on macOS (104-char limit).
   `spike/run.sh` handles both with `env -i` and `/tmp/rl-spike-profile`.
+- **Kokoro is pinned at build time.** kokoro-js ignores `revision` and hardcodes `resolve/main/voices`, so
+  `esbuild.mjs` (`PINS`) rewrites both URLs to one Hugging Face commit and fails the build if they move.
+- **`voice` and `neverSendGlobs` are `application`-scoped too**, so a workspace cannot pick a paid voice or
+  empty the never-send list; the fixture's `.vscode/settings.json` tries both.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
 

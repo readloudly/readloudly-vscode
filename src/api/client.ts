@@ -53,17 +53,24 @@ export function createClient(baseUrl: string, session: Session, fetchImpl = fetc
       body: '{}',
       headers: { 'content-type': 'application/json', cookie: `${names.refresh}=${tokens.refresh}` },
     });
+    // Only a rejected refresh ends the session; a server or network failure keeps it for the next try.
+    if (!res.ok && res.status !== 401 && res.status !== 403)
+      throw new ApiError(res.status, 'ReadLoudly could not renew your session');
     const access = res.ok ? readCookie(res, names.access) : undefined;
     return access
       ? { access, refresh: readCookie(res, names.refresh) ?? tokens.refresh }
       : undefined;
   }
+  // Clips are fetched three at a time, so their 401s share one refresh.
+  let refreshing: Promise<Tokens | undefined> | undefined;
+  const refreshOnce = (tokens: Tokens) =>
+    (refreshing ??= refresh(tokens).finally(() => (refreshing = undefined)));
 
   return async (path, init = {}) => {
     const tokens = await session.get();
     let res = await send(path, init, tokens);
     if (res.status === 401 && tokens) {
-      const fresh = await refresh(tokens);
+      const fresh = await refreshOnce(tokens);
       await session.set(fresh);
       if (fresh) res = await send(path, init, fresh);
       if (res.status === 401) await session.set(undefined);

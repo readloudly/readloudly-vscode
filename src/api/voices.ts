@@ -47,12 +47,15 @@ export class Clips {
   }
 
   get(texts: string[], index: number): Promise<ArrayBuffer> {
+    // Only the previous sentence (for Back) and the next two stay in memory during a long read.
+    const keep = new Set(texts.slice(Math.max(0, index - 1), index + 3));
+    for (const text of this.pending.keys()) if (!keep.has(text)) this.pending.delete(text);
     for (const i of [index, index + 1, index + 2]) {
       const text = texts[i];
       if (text === undefined || this.pending.has(text)) continue;
       const clip = this.fetchClip(text, this.abort.signal);
-      // A prefetch that fails is retried when its turn comes, and never reports an unhandled rejection.
-      clip.catch(() => this.pending.delete(text));
+      // A failed clip is retried when its turn comes; a cancelled one must not evict its replacement.
+      clip.catch(() => this.pending.get(text) === clip && this.pending.delete(text));
       this.pending.set(text, clip);
     }
     return this.pending.get(texts[index]!)!;

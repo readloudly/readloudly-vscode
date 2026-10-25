@@ -86,6 +86,34 @@ test('a rejected refresh signs out without retrying', async () => {
   assert.equal(now(), undefined);
 });
 
+test('a refresh that fails on the server keeps the session and reports the error', async () => {
+  const { fetchImpl } = fake([json(401, {}), json(502, { message: 'Bad Gateway' })]);
+  const { session, now } = store({ access: 'A', refresh: 'R' });
+  await assert.rejects(
+    createClient('https://api.readloudly.com', session, fetchImpl)('/usage'),
+    (e) => e instanceof ApiError && e.status === 502
+  );
+  assert.deepEqual(now(), { access: 'A', refresh: 'R' });
+});
+
+test('requests that hit 401 together share one refresh', async () => {
+  let refreshes = 0;
+  const fetchImpl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+    if (String(url).endsWith('/auth/refresh')) {
+      refreshes++;
+      await new Promise((r) => setTimeout(r, 10));
+      return json(200, { success: true }, { 'set-cookie': 'rl-user-token=B' });
+    }
+    return new Headers(init.headers).get('authorization') === 'Bearer B'
+      ? json(200, {})
+      : json(401, {});
+  }) as typeof fetch;
+  const { session } = store({ access: 'A', refresh: 'R' });
+  const request = createClient('https://api.readloudly.com', session, fetchImpl);
+  await Promise.all([request('/voices'), request('/voices'), request('/voices')]);
+  assert.equal(refreshes, 1);
+});
+
 test('error bodies become an ApiError with status, code and message', async () => {
   const { fetchImpl } = fake([
     json(403, { statusCode: 403, message: 'Free trial used', code: 'FREE_TRIAL_EXHAUSTED' }),

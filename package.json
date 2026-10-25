@@ -261,7 +261,8 @@
         "readloudly.voice": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Voice name. Empty uses the system default; `rl:` voices are ReadLoudly voices and need sign-in. Pick one with **ReadLoudly: Choose Voice**."
+          "markdownDescription": "Voice name. Empty uses the system default; `rl:` voices are ReadLoudly voices and need sign-in. Pick one with **ReadLoudly: Choose Voice**.",
+          "scope": "application"
         },
         "readloudly.speed": {
           "type": "number",
@@ -308,7 +309,8 @@
             "**/*secret*",
             "**/*.p12"
           ],
-          "description": "Files matching these globs are never sent to ReadLoudly, whatever voice is chosen. The device voice reads them instead."
+          "description": "Files matching these globs are never sent anywhere (ReadLoudly, a language model or a web link); the device voice reads them. User settings only, so a workspace cannot turn the protection off.",
+          "scope": "application"
         },
         "readloudly.apiUrl": {
           "type": "string",
@@ -456,7 +458,7 @@
         "toolReferenceName": "readAloud",
         "canBeReferencedInPrompt": true,
         "userDescription": "Read text aloud to you with ReadLoudly.",
-        "modelDescription": "Reads the given text aloud to the user with the ReadLoudly voice they chose, highlighting nothing in the editor. Use it when the user asks to hear text, an answer or a summary. It has no side effects beyond audio.",
+        "modelDescription": "Reads the given text aloud to the user on this computer. The text is spoken by a device voice and is never sent to a server by this tool. Use it when the user asks to hear text, an answer or a summary.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -557,5 +559,8 @@
   "galleryBanner": {
     "color": "#2D5CD2",
     "theme": "dark"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
   }
 }

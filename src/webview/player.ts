@@ -12,6 +12,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const synth = window.speechSynthesis;
 let current = -1;
 let keepalive = 0;
+let watchdog = 0;
 let ctx: AudioContext | undefined;
 let source: AudioBufferSourceNode | undefined;
 let engine: Promise<typeof import('./kokoro.ts')> | undefined;
@@ -69,6 +70,7 @@ const sendVoices = () => api.postMessage({ type: 'voices', voices: listVoices() 
 function cancel() {
   current = -1;
   clearInterval(keepalive);
+  clearTimeout(watchdog);
   synth.cancel();
   source?.stop();
   source = undefined;
@@ -172,6 +174,7 @@ function speak(m: { token: number; text: string; rate: number; voice: string }) 
     if (e.name === 'word' && m.token === current)
       api.postMessage({ type: 'word', token: m.token, charIndex: e.charIndex });
   };
+  u.onstart = () => clearTimeout(watchdog);
   u.onend = () => {
     if (m.token !== current) return;
     clearInterval(keepalive);
@@ -183,6 +186,16 @@ function speak(m: { token: number; text: string; rate: number; voice: string }) 
     api.postMessage({ type: 'error', token: m.token, error: e.error });
   };
   synth.speak(u);
+  // Some systems (often Linux) have no speech voices and never start or fail, so silence becomes an error.
+  watchdog = window.setTimeout(() => {
+    if (m.token !== current) return;
+    synth.cancel();
+    api.postMessage({
+      type: 'error',
+      token: m.token,
+      error: 'no system voice answered; choose a Kokoro voice, which runs on this computer',
+    });
+  }, 8000);
   // Chromium can leave a fresh utterance paused after cancel() with no error, so nudge it.
   synth.resume();
   keepalive = window.setInterval(() => synth.resume(), 5000);

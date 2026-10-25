@@ -1,8 +1,27 @@
 import * as esbuild from 'esbuild';
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, readFileSync } from 'node:fs';
 
 const watch = process.argv.includes('--watch');
 const common = { bundle: true, sourcemap: true, logLevel: 'info', target: 'es2023' };
+// Kokoro downloads its model and voices from the moving `main` branch, so the build pins one Hugging Face commit.
+const KOKORO_REVISION = '1939ad2a8e416c0acfeecc08a694d14ef25f2231';
+const PINS = [
+  ['kokoro-js/dist/kokoro.js', '/resolve/main/voices/', `/resolve/${KOKORO_REVISION}/voices/`],
+  ['transformers/dist/transformers.web.js', '/resolve/{revision}/', `/resolve/${KOKORO_REVISION}/`],
+];
+const pinKokoro = {
+  name: 'pin-kokoro',
+  setup(build) {
+    build.onLoad({ filter: /(kokoro|transformers)(\.web)?\.js$/ }, ({ path }) => {
+      const pin = PINS.find(([file]) => path.replaceAll('\\', '/').endsWith(file));
+      if (!pin) return undefined;
+      const source = readFileSync(path, 'utf8');
+      if (!source.includes(pin[1]))
+        throw new Error(`${pin[0]} changed; update PINS in esbuild.mjs`);
+      return { contents: source.replaceAll(pin[1], pin[2]), loader: 'js' };
+    });
+  },
+};
 const builds = [
   {
     ...common,
@@ -27,6 +46,7 @@ const builds = [
     format: 'esm',
     minify: true,
     sourcemap: false,
+    plugins: [pinKokoro],
   },
   {
     ...common,

@@ -58,3 +58,37 @@ test('Clips.cancel aborts every request in flight and forgets them', async () =>
   assert.equal(signals.length, 3);
   assert.ok(signals.every((s) => s.aborted));
 });
+
+test('Clips forgets clips the reader has moved past', async () => {
+  const asked: string[] = [];
+  const clips = new Clips(async (text) => {
+    asked.push(text);
+    return new ArrayBuffer(1);
+  });
+  const texts = ['a', 'b', 'c', 'd', 'e', 'f'];
+  await clips.get(texts, 0);
+  await clips.get(texts, 4);
+  await clips.get(texts, 0);
+  assert.deepEqual(asked, ['a', 'b', 'c', 'e', 'f', 'a', 'b', 'c']);
+});
+
+test('a cancelled clip failing late does not evict the newer clip for the same text', async () => {
+  let fail: (e: Error) => void = () => {};
+  let calls = 0;
+  const clips = new Clips((_text, signal) => {
+    calls++;
+    if (calls === 1)
+      return new Promise((_r, reject) => {
+        fail = reject;
+        signal.addEventListener('abort', () => undefined);
+      });
+    return Promise.resolve(new ArrayBuffer(2));
+  });
+  const first = clips.get(['a'], 0);
+  clips.cancel();
+  await clips.get(['a'], 0);
+  fail(new Error('aborted late'));
+  await assert.rejects(first);
+  await clips.get(['a'], 0);
+  assert.equal(calls, 2);
+});

