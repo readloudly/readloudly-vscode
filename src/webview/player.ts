@@ -3,7 +3,7 @@ import { goodVoices, kokoroVoices } from '../player/voices.ts';
 
 export type ToWebview =
   | { type: 'speak'; token: number; text: string; rate: number; voice: string }
-  | { type: 'play'; token: number; audio: ArrayBuffer; rate: number }
+  | { type: 'play'; token: number; audio: ArrayBuffer; rate: number; chars: number }
   | { type: 'cancel' };
 
 declare function acquireVsCodeApi(): { postMessage(message: FromWebview): void };
@@ -68,16 +68,21 @@ const sendVoices = () => api.postMessage({ type: 'voices', voices: listVoices() 
 
 function cancel() {
   current = -1;
+  clearInterval(keepalive);
+  synth.cancel();
+  source?.stop();
+  source = undefined;
   audio.onended = audio.onerror = null;
   audio.pause();
 }
 
 // Pro clips are MP3 bytes from the extension host; the media element keeps the pitch when the speed changes.
-function play(m: { token: number; audio: ArrayBuffer; rate: number }) {
+function play(m: { token: number; audio: ArrayBuffer; rate: number; chars: number }) {
   cancel();
   current = m.token;
   const url = URL.createObjectURL(new Blob([m.audio], { type: 'audio/mpeg' }));
   const done = (error?: string) => {
+    clearInterval(keepalive);
     URL.revokeObjectURL(url);
     if (m.token !== current) return;
     api.postMessage(
@@ -92,10 +97,15 @@ function play(m: { token: number; audio: ArrayBuffer; rate: number }) {
     if (e instanceof DOMException && e.name === 'NotAllowedError') $('unlock').hidden = false;
     done('click Turn on sound in the ReadLoudly section of the Explorer, once');
   });
-  clearInterval(keepalive);
-  synth.cancel();
-  source?.stop();
-  source = undefined;
+  // Clips carry no word timings either, so the spoken word is estimated as for Kokoro.
+  keepalive = window.setInterval(() => {
+    if (audio.duration)
+      api.postMessage({
+        type: 'word',
+        token: m.token,
+        charIndex: Math.floor((audio.currentTime / audio.duration) * m.chars),
+      });
+  }, 150);
 }
 
 async function speakKokoro(m: { token: number; text: string; rate: number; voice: string }) {

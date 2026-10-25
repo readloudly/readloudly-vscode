@@ -1,12 +1,19 @@
 import * as vscode from 'vscode';
+import { ApiError, createClient, describe, type Request } from './api/client.ts';
+import { Clips, estimateCredits, listVoices, type ProVoice } from './api/voices.ts';
+import { Account } from './auth/session.ts';
 import { Queue } from './player/queue.ts';
 import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
 import { kokoroVoices } from './player/voices.ts';
+import { disclosed, isBlocked } from './privacy.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
-import { splitSentences, wordAt, type Sentence } from './text/sentences.ts';
+import { capLength, splitSentences, wordAt, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+// The backend rejects longer texts, and shorter clips start sooner.
+const MAX_CHARS = 1000;
+const PRO_VOICE = 'readloudly.proVoice';
 
 interface Source {
   uri?: vscode.Uri;
@@ -43,6 +50,104 @@ export function activate(context: vscode.ExtensionContext) {
 
   const post = (message: ToWebview) => void view?.webview.postMessage(message);
   const speed = () => cfg().get<number>('speed', 1);
+  const voiceName = () => cfg().get<string>('voice', '');
+  const isPro = () => voiceName().startsWith('rl:');
+  const apiUrl = () =>
+    cfg().get<string>('apiUrl', 'https://api.readloudly.com').replace(/\/+$/, '');
+  const webUrl = () =>
+    cfg().get<string>('webUrl', 'https://app.readloudly.com').replace(/\/+$/, '');
+  const account = new Account(context.secrets, apiUrl);
+  const api: Request = (path, init) => createClient(apiUrl(), account)(path, init);
+  let proVoices: ProVoice[] = [];
+  let credits: number | undefined;
+  // Asked once per read: blocked file, signed out or a declined notice drops that read to the device voice.
+  let proGate: Promise<boolean> | undefined;
+  let proDenied = false;
+
+  async function clip(text: string, signal?: AbortSignal) {
+    const body = JSON.stringify({ Text: text, VoiceId: voiceName().slice('rl:'.length) });
+    const once = () => api('/voices', { method: 'POST', body, signal });
+    // A busy self-hosted voice server is usually free again a moment later.
+    const res = await once().catch((e: unknown) => {
+      if (e instanceof ApiError && e.code === 'KOKORO_BUSY') return once();
+      throw e;
+    });
+    return res.arrayBuffer();
+  }
+  const clips = new Clips(clip);
+
+  async function refreshCredits() {
+    const usage = (await (await api('/usage')).json()) as { totalActivePoints?: number };
+    credits = usage.totalActivePoints;
+    sync();
+  }
+
+  async function allowPro(doc: vscode.TextDocument | undefined, texts: string[]) {
+    if (isBlocked(doc)) {
+      void vscode.window.showWarningMessage(
+        'ReadLoudly: this file matches readloudly.neverSendGlobs, so it is never sent to ReadLoudly.'
+      );
+      return false;
+    }
+    if (!(await account.get())) {
+      void vscode.window
+        .showInformationMessage('ReadLoudly: sign in to use ReadLoudly voices.', 'Sign In')
+        .then((pick) => pick && account.signIn());
+      return false;
+    }
+    if (!(await disclosed(context.globalState))) return false;
+    const premium = context.globalState.get<{ premium?: boolean }>(PRO_VOICE)?.premium ?? true;
+    vscode.window.setStatusBarMessage(
+      `ReadLoudly: up to ${estimateCredits(texts, premium).toLocaleString()} credits, cached audio is free`,
+      8000
+    );
+    // The balance is only a hint in the tooltip; a failed read keeps the last one shown.
+    refreshCredits().catch(() => undefined);
+    return true;
+  }
+
+  async function speakPro(token: number) {
+    const items = queue.items.map((s) => s.text);
+    const index = queue.index;
+    const doc = vscode.workspace.textDocuments.find(
+      (d) => d.uri.toString() === source.uri?.toString()
+    );
+    try {
+      if (!(await (proGate ??= allowPro(doc, items)))) {
+        proDenied = true;
+        if (token === queue.token) speak();
+        return;
+      }
+      const audio = await clips.get(items, index);
+      if (token === queue.token && queue.status === 'playing')
+        post({ type: 'play', token, audio, rate: speed(), chars: items[index]!.length });
+    } catch (e) {
+      if (token !== queue.token || (e instanceof Error && e.name === 'AbortError')) return;
+      const { action, message } = describe(e);
+      if (action === 'device' || action === 'retry') {
+        proDenied = true;
+        void vscode.window.showWarningMessage(`ReadLoudly: ${message}`);
+        return speak();
+      }
+      queue.pause();
+      sync();
+      const fix = { credits: 'Get Credits', standard: 'Choose Voice', signIn: 'Sign In' }[action];
+      const pick = await vscode.window.showWarningMessage(
+        `ReadLoudly: ${message}`,
+        fix,
+        'Use Device Voice'
+      );
+      if (pick === 'Get Credits')
+        void vscode.env.openExternal(vscode.Uri.parse(`${webUrl()}/pricing/`));
+      else if (pick === 'Choose Voice') void chooseVoice();
+      else if (pick === 'Sign In') void account.signIn();
+      else if (pick === 'Use Device Voice' && queue.status === 'paused') {
+        proDenied = true;
+        queue.resume();
+        speak();
+      }
+    }
+  }
   const sourceEditors = () =>
     vscode.window.visibleTextEditors.filter(
       (e) => e.document.uri.toString() === source.uri?.toString()
@@ -69,7 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
       queue.status === 'idle'
         ? '$(unmute) ReadLoudly'
         : `${queue.status === 'playing' ? '$(debug-pause)' : '$(play)'} Sentence ${queue.index + 1}/${n}`;
-    status.tooltip = controls(queue.status === 'playing');
+    status.tooltip = controls(queue.status === 'playing', credits);
   }
 
   function speak() {
@@ -86,12 +191,13 @@ export function activate(context: vscode.ExtensionContext) {
         editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
       }
     }
+    if (isPro() && !proDenied) return void speakPro(queue.token);
     post({
       type: 'speak',
       token: queue.token,
       text: s.text,
       rate: speed(),
-      voice: cfg().get<string>('voice', ''),
+      voice: isPro() ? '' : voiceName(),
     });
   }
 
@@ -101,8 +207,9 @@ export function activate(context: vscode.ExtensionContext) {
       doc.languageId === 'markdown'
         ? maskMarkdown(text, cfg().get('skipCodeBlocks', true))
         : maskPlain(text);
-    return splitSentences(prose.slice(from, to), from);
+    return capLength(splitSentences(prose.slice(from, to), from), MAX_CHARS);
   }
+  const sentencesOfText = (text: string) => capLength(splitSentences(maskPlain(text)), MAX_CHARS);
 
   function read(items: Sentence[], index: number, from: Source) {
     if (!items.length)
@@ -111,6 +218,9 @@ export function activate(context: vscode.ExtensionContext) {
       );
     source = from;
     resumeAt = undefined;
+    clips.cancel();
+    proGate = undefined;
+    proDenied = false;
     queue.load(items, index);
     speak();
   }
@@ -205,26 +315,59 @@ export function activate(context: vscode.ExtensionContext) {
   async function chooseVoice() {
     await showPlayer();
     for (let i = 0; i < 30 && !voices.length; i++) await new Promise((r) => setTimeout(r, 100));
+    const signedIn = !!(await account.get());
+    if (signedIn && !proVoices.length)
+      proVoices = await listVoices(api).catch((e: unknown) => {
+        void vscode.window.showWarningMessage(
+          `ReadLoudly: could not load ReadLoudly voices (${describe(e).message})`
+        );
+        return [];
+      });
     const lang = vscode.env.language.split('-')[0]!;
-    const sorted = [...voices].sort(
-      (a, b) => Number(b.lang.startsWith(lang)) - Number(a.lang.startsWith(lang))
-    );
-    const pick = await vscode.window.showQuickPick(
-      [
-        { label: 'System default', name: '' },
-        ...sorted.map((v) => ({ label: v.label ?? v.name, description: v.lang, name: v.name })),
-      ],
-      {
-        placeHolder: voices.length
-          ? 'Choose a device voice'
-          : 'No device voices found in this editor',
-      }
-    );
-    if (pick) await cfg().update('voice', pick.name, vscode.ConfigurationTarget.Global);
+    const mine = (v: { lang: string }) => Number(v.lang.startsWith(lang));
+    const byLang = <T extends { lang: string }>(list: T[]) =>
+      [...list].sort((a, b) => mine(b) - mine(a) || a.lang.localeCompare(b.lang));
+    type Item = vscode.QuickPickItem & { name?: string; premium?: boolean; signIn?: true };
+    const separator = (label: string): Item => ({
+      label,
+      kind: vscode.QuickPickItemKind.Separator,
+    });
+    const items: Item[] = [
+      separator('Device voices, free and offline'),
+      { label: 'System default', name: '' },
+      ...byLang(voices).map((v) => ({
+        label: v.label ?? v.name,
+        description: v.lang,
+        name: v.name,
+      })),
+      separator('ReadLoudly voices, sends the text to ReadLoudly'),
+      ...(signedIn
+        ? byLang(proVoices).flatMap((v, i, all) => [
+            ...(all[i - 1]?.lang === v.lang ? [] : [separator(v.lang)]),
+            {
+              label: v.label,
+              description: v.premium ? 'Premium, 1 credit per character' : 'Standard',
+              name: v.name,
+              premium: v.premium,
+            },
+          ])
+        : [{ label: '$(account) Sign in for ReadLoudly voices', signIn: true as const }]),
+    ];
+    const pick = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Choose a voice',
+      matchOnDescription: true,
+    });
+    if (pick?.signIn) return void ((await account.signIn()) && chooseVoice());
+    if (pick?.name === undefined) return;
+    if (pick.name.startsWith('rl:'))
+      await context.globalState.update(PRO_VOICE, { label: pick.label, premium: pick.premium });
+    await cfg().update('voice', pick.name, vscode.ConfigurationTarget.Global);
   }
 
   const voiceLabel = () => {
-    const name = cfg().get<string>('voice', '');
+    const name = voiceName();
+    if (name.startsWith('rl:'))
+      return context.globalState.get<{ label?: string }>(PRO_VOICE)?.label ?? 'ReadLoudly voice';
     // Kokoro names are known before the engine lists device voices, so the lens never shows a raw id.
     const voice = [...kokoroVoices(), ...voices].find((v) => v.name === name);
     return voice?.label ?? (name || 'System voice');
@@ -281,6 +424,71 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
+  async function exportMp3() {
+    const editor = editorOrWarn();
+    if (!editor) return;
+    if (!isPro()) {
+      const pick = await vscode.window.showInformationMessage(
+        'ReadLoudly: MP3 export uses a ReadLoudly voice. Choose one first.',
+        'Choose Voice'
+      );
+      return void (pick && chooseVoice());
+    }
+    const { document: doc, selection } = editor;
+    const texts = (
+      selection.isEmpty
+        ? sentencesOf(doc, 0, doc.getText().length)
+        : sentencesOf(doc, doc.offsetAt(selection.start), doc.offsetAt(selection.end))
+    ).map((s) => s.text);
+    if (!texts.length)
+      return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to export.');
+    if (!(await allowPro(doc, texts))) return;
+    const target = await vscode.window.showSaveDialog({
+      defaultUri:
+        doc.uri.scheme === 'file'
+          ? doc.uri.with({ path: doc.uri.path.replace(/(\.[^./]*)?$/, '.mp3') })
+          : undefined,
+      filters: { MP3: ['mp3'] },
+    });
+    if (!target) return;
+    try {
+      const saved = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'ReadLoudly: exporting MP3',
+          cancellable: true,
+        },
+        async (progress, cancel) => {
+          const abort = new AbortController();
+          cancel.onCancellationRequested(() => abort.abort());
+          const parts: Uint8Array[] = [];
+          // MP3 frames are self-contained, so one clip per sentence, back to back, is one playable file.
+          for (const [i, text] of texts.entries()) {
+            progress.report({
+              message: `${i + 1} of ${texts.length}`,
+              increment: 100 / texts.length,
+            });
+            parts.push(new Uint8Array(await clip(text, abort.signal)));
+          }
+          await vscode.workspace.fs.writeFile(target, Buffer.concat(parts));
+          return true;
+        }
+      );
+      refreshCredits().catch(() => undefined);
+      const pick = await vscode.window.showInformationMessage(
+        `ReadLoudly: saved ${target.path.split('/').pop()}.`,
+        'Reveal'
+      );
+      if (saved && pick) void vscode.commands.executeCommand('revealFileInOS', target);
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
+      const { action, message } = describe(e);
+      void vscode.window.showErrorMessage(
+        `ReadLoudly: the MP3 was not saved. ${action === 'device' ? 'ReadLoudly could not be reached.' : message}`
+      );
+    }
+  }
+
   const restartIfPlaying = () => {
     if (queue.status === 'playing') queue.load(queue.items, queue.index);
     speak();
@@ -307,8 +515,7 @@ export function activate(context: vscode.ExtensionContext) {
       const editor = editorOrWarn();
       if (editor) readDocFrom(editor.document, editor.document.offsetAt(editor.selection.active));
     },
-    readClipboard: async () =>
-      read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, {}),
+    readClipboard: async () => read(sentencesOfText(await vscode.env.clipboard.readText()), 0, {}),
     // Chat, terminal, hovers and webviews never expose their selection, so copy it with VS Code's own command and read that.
     readFocused: async (copy = 'editor.action.clipboardCopyAction') => {
       // ponytail: text clipboards only; an image on the clipboard is replaced by the restored text.
@@ -321,10 +528,11 @@ export function activate(context: vscode.ExtensionContext) {
         return void vscode.window.showInformationMessage(
           'ReadLoudly: select some text first, then press the shortcut again.'
         );
-      read(splitSentences(maskPlain(text)), 0, {});
+      read(sentencesOfText(text), 0, {});
     },
     togglePause,
     stop: () => {
+      clips.cancel();
       queue.stop();
       resumeAt = undefined;
       speak();
@@ -351,6 +559,12 @@ export function activate(context: vscode.ExtensionContext) {
     slower: () => setSpeed(-1),
     chooseVoice,
     showPlayer,
+    signIn: () => account.signIn(),
+    signOut: async () => {
+      await account.signOut();
+      void vscode.window.showInformationMessage('ReadLoudly: signed out.');
+    },
+    exportMp3,
     statusClick: () => (!view || queue.status === 'idle' ? showPlayer() : togglePause()),
   };
 
@@ -363,6 +577,15 @@ export function activate(context: vscode.ExtensionContext) {
     wordDecoration,
     lensChanged,
     vscode.languages.registerCodeLensProvider({ scheme: '*' }, lineControls),
+    account,
+    vscode.authentication.registerAuthenticationProvider('readloudly', 'ReadLoudly', account),
+    account.onDidChangeSessions(() => {
+      proVoices = [];
+      credits = undefined;
+      proGate = undefined;
+      proDenied = false;
+      sync();
+    }),
     vscode.window.onDidChangeTextEditorSelection((e) => {
       const sel = e.selections[0]!;
       const mouse = e.kind === vscode.TextEditorSelectionChangeKind.Mouse;
@@ -390,6 +613,11 @@ export function activate(context: vscode.ExtensionContext) {
       if (e.affectsConfiguration('readloudly.highlightColor')) {
         decoration.dispose();
         decoration = makeDecoration();
+      }
+      if (e.affectsConfiguration('readloudly.voice')) {
+        clips.cancel();
+        proGate = undefined;
+        proDenied = false;
       }
       if (e.affectsConfiguration('readloudly.speed') || e.affectsConfiguration('readloudly.voice'))
         restartIfPlaying();
@@ -424,11 +652,17 @@ export function activate(context: vscode.ExtensionContext) {
       lensLine = { uri: uri.toString(), line, selected };
       lensChanged.fire();
     },
+    // Other extensions can read these exports, so the session hooks exist only under the test runner.
+    ...(context.extensionMode === vscode.ExtensionMode.Test && {
+      testSession: (s: { access: string; refresh?: string; email: string }) =>
+        context.secrets.store('readloudly.session', JSON.stringify(s)),
+      testDisclosed: () => context.globalState.update('readloudly.disclosed', true),
+    }),
   };
 }
 
 // Hovering the status bar item shows a mini player, so the full view can stay closed.
-function controls(playing: boolean) {
+function controls(playing: boolean, credits: number | undefined) {
   const md = new vscode.MarkdownString(
     [
       '[$(debug-step-back)](command:readloudly.previous "Previous sentence")',
@@ -436,7 +670,8 @@ function controls(playing: boolean) {
       '[$(debug-step-over)](command:readloudly.next "Next sentence")',
       '[$(debug-stop)](command:readloudly.stop "Stop")',
       '[$(unmute) Player](command:readloudly.showPlayer "Show the player")',
-    ].join('&nbsp;&nbsp;'),
+    ].join('&nbsp;&nbsp;') +
+      (credits === undefined ? '' : `\n\n${credits.toLocaleString()} ReadLoudly credits left`),
     true
   );
   md.isTrusted = {

@@ -54,7 +54,9 @@ export function createClient(baseUrl: string, session: Session, fetchImpl = fetc
       headers: { 'content-type': 'application/json', cookie: `${names.refresh}=${tokens.refresh}` },
     });
     const access = res.ok ? readCookie(res, names.access) : undefined;
-    return access && { access, refresh: readCookie(res, names.refresh) ?? tokens.refresh };
+    return access
+      ? { access, refresh: readCookie(res, names.refresh) ?? tokens.refresh }
+      : undefined;
   }
 
   return async (path, init = {}) => {

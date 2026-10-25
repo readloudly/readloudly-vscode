@@ -23,3 +23,9 @@
 - Later: lightbulb Code Action removed (VS Code forces a bulb icon by kind); selecting text now puts "▶️ Listen to selection" in the line player row. Lens uses one emoji family (media-control squircles) since CodeLens can't render SVG or colored codicons; en-space padding guarded by ZWSP so VS Code doesn't trim it. 7 integration pass; reinstalled in Antigravity.
 - Later: line player uses Material Symbols Rounded (Apache-2.0) via contributes.icons + media/icons.woff (1.9 KB, built by scripts/icons.py from package.json codepoints, glyphs scaled 1.25x to match codicons); every control has a text label. Icons are monochrome by design (font glyphs take the CodeLens theme color).
 - Later: readFocused ("Read Selected Text Anywhere") on the same shortcut outside editors: copies with editor.action.clipboardCopyAction (terminal: terminal.copySelection via keybinding args), reads, restores the text clipboard. Verified live on a Chat answer (status "Sentence 1/1"); terminal path unverified. 8 integration pass.
+
+## 2026-10-26 M2 ReadLoudly voices wired
+
+- Sign-in (email/password, SecretStorage only, Accounts menu provider), voice picker with ReadLoudly voices by language, per-read gate (neverSendGlobs, sign-in, one-time notice), credit estimate + balance, 3-clip prefetch, error actions (credits/standard/sign-in/device fallback), Export as MP3 (per-sentence clips concatenated: /voices/download returns an unsigned S3 URL).
+- Fixed webview cancel() regression (synth/Kokoro kept speaking after Stop/Next); client refresh returned '' as tokens.
+- Gates: 44 unit, 10 integration (new pro.test.ts: blocked file never fetches; Bearer + body on /voices), typecheck, lint. Live EDH vs a local mock API: sign-in, picker, 1 unlock click, MP3 clips play 1→4/4.

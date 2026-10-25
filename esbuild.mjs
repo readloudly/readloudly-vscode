@@ -30,8 +30,8 @@ const builds = [
   },
   {
     ...common,
-    entryPoints: ['test/integration/extension.test.ts'],
-    outfile: 'dist/test/extension.test.js',
+    entryPoints: ['test/integration/extension.test.ts', 'test/integration/pro.test.ts'],
+    outdir: 'dist/test',
     platform: 'node',
     format: 'cjs',
     external: ['vscode', 'mocha'],

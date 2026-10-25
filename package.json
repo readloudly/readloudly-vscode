@@ -139,6 +139,21 @@
         "command": "readloudly.cycleSpeed",
         "title": "Change Speed",
         "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.exportMp3",
+        "title": "Export as MP3",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.signIn",
+        "title": "Sign In",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.signOut",
+        "title": "Sign Out",
+        "category": "ReadLoudly"
       }
     ],
     "menus": {
@@ -156,6 +171,10 @@
         {
           "command": "readloudly.readFile",
           "group": "readloudly@3"
+        },
+        {
+          "command": "readloudly.exportMp3",
+          "group": "readloudly@4"
         }
       ],
       "commandPalette": [
@@ -175,7 +194,7 @@
         "readloudly.voice": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Device voice name. Empty uses the system default. Pick one with **ReadLoudly: Choose Voice**."
+          "markdownDescription": "Voice name. Empty uses the system default; `rl:` voices are ReadLoudly voices and need sign-in. Pick one with **ReadLoudly: Choose Voice**."
         },
         "readloudly.speed": {
           "type": "number",
@@ -208,6 +227,31 @@
           "type": "boolean",
           "default": true,
           "description": "Show play controls above the line you click."
+        },
+        "readloudly.neverSendGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.env*",
+            "**/*.pem",
+            "**/*.key",
+            "**/id_rsa*",
+            "**/*secret*",
+            "**/*.p12"
+          ],
+          "description": "Files matching these globs are never sent to ReadLoudly, whatever voice is chosen. The device voice reads them instead."
+        },
+        "readloudly.apiUrl": {
+          "type": "string",
+          "default": "https://api.readloudly.com",
+          "description": "ReadLoudly API address. Change it only for a self-hosted or test server."
+        },
+        "readloudly.webUrl": {
+          "type": "string",
+          "default": "https://app.readloudly.com",
+          "description": "ReadLoudly web app address, used for buying credits and opening documents."
         }
       }
     },
@@ -293,7 +337,13 @@
           "fontCharacter": "\\E91F"
         }
       }
-    }
+    },
+    "authentication": [
+      {
+        "id": "readloudly",
+        "label": "ReadLoudly"
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.mjs",
