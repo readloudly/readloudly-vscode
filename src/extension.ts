@@ -6,18 +6,16 @@ import { splitSentences, wordAt, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
-const WORDS_PER_SECOND = 2.6;
 
 interface Source {
   uri?: vscode.Uri;
-  label: string;
 }
 
 export function activate(context: vscode.ExtensionContext) {
   const queue = new Queue<Sentence>();
   const cfg = () => vscode.workspace.getConfiguration('readloudly');
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  let source: Source = { label: '' };
+  let source: Source = {};
   let resumeAt: number | undefined;
   let voices: Voice[] = [];
   let view: vscode.WebviewView | undefined;
@@ -71,21 +69,6 @@ export function activate(context: vscode.ExtensionContext) {
         ? '$(unmute) ReadLoudly'
         : `${queue.status === 'playing' ? '$(debug-pause)' : '$(play)'} Sentence ${queue.index + 1}/${n}`;
     status.tooltip = controls(queue.status === 'playing');
-    const words = queue.items
-      .slice(queue.index)
-      .reduce((sum, x) => sum + x.text.split(' ').length, 0);
-    post({
-      type: 'state',
-      status: queue.status,
-      index: queue.index,
-      total: n,
-      speed: speed(),
-      secondsLeft: words / WORDS_PER_SECOND / speed(),
-      file: source.label,
-      sentence: s?.text ?? '',
-      voices,
-      voice: cfg().get<string>('voice', ''),
-    });
   }
 
   function speak() {
@@ -138,10 +121,9 @@ export function activate(context: vscode.ExtensionContext) {
       return void vscode.window.showInformationMessage(
         'ReadLoudly: there is nothing after the cursor.'
       );
-    read(all, index, { uri: doc.uri, label: label(doc) });
+    read(all, index, { uri: doc.uri });
   }
 
-  const label = (doc: vscode.TextDocument) => doc.uri.path.split('/').pop() || 'Untitled';
   const editorOrWarn = () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor)
@@ -190,12 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
         void vscode.window.showWarningMessage(
           `ReadLoudly: the voice stopped (${m.error}). Press play to try again.`
         );
-      } else if (m.type === 'voice')
-        void cfg().update('voice', m.name, vscode.ConfigurationTarget.Global);
-      else if (m.type === 'cmd')
-        void vscode.commands.executeCommand(
-          `readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`
-        );
+      } else if (m.type === 'cmd') void vscode.commands.executeCommand('readloudly.togglePause');
     });
   }
 
@@ -298,7 +275,6 @@ export function activate(context: vscode.ExtensionContext) {
       if (selection.isEmpty) return readDocFrom(doc, doc.offsetAt(selection.active));
       read(sentencesOf(doc, doc.offsetAt(selection.start), doc.offsetAt(selection.end)), 0, {
         uri: doc.uri,
-        label: label(doc),
       });
     },
     readFile: () => {
@@ -306,7 +282,6 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor)
         read(sentencesOf(editor.document, 0, editor.document.getText().length), 0, {
           uri: editor.document.uri,
-          label: label(editor.document),
         });
     },
     readFromCursor: () => {
@@ -314,9 +289,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor) readDocFrom(editor.document, editor.document.offsetAt(editor.selection.active));
     },
     readClipboard: async () =>
-      read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, {
-        label: 'Clipboard',
-      }),
+      read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, {}),
     togglePause,
     stop: () => {
       queue.stop();
