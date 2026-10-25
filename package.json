@@ -313,12 +313,14 @@
         "readloudly.apiUrl": {
           "type": "string",
           "default": "https://api.readloudly.com",
-          "description": "ReadLoudly API address. Change it only for a self-hosted or test server."
+          "description": "ReadLoudly API address. Change it only for a test server. User settings only: a workspace cannot change where your sign-in is sent.",
+          "scope": "application"
         },
         "readloudly.webUrl": {
           "type": "string",
           "default": "https://app.readloudly.com",
-          "description": "ReadLoudly web app address, used for buying credits and opening documents."
+          "description": "ReadLoudly web app address, used for buying credits and opening documents.",
+          "scope": "application"
         }
       }
     },

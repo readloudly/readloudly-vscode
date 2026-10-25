@@ -29,3 +29,8 @@
 - Sign-in (email/password, SecretStorage only, Accounts menu provider), voice picker with ReadLoudly voices by language, per-read gate (neverSendGlobs, sign-in, one-time notice), credit estimate + balance, 3-clip prefetch, error actions (credits/standard/sign-in/device fallback), Export as MP3 (per-sentence clips concatenated: /voices/download returns an unsigned S3 URL).
 - Fixed webview cancel() regression (synth/Kokoro kept speaking after Stop/Next); client refresh returned '' as tokens.
 - Gates: 44 unit, 10 integration (new pro.test.ts: blocked file never fetches; Bearer + body on /voices), typecheck, lint. Live EDH vs a local mock API: sign-in, picker, 1 unlock click, MP3 clips play 1→4/4.
+
+## 2026-10-26 M3 + M4
+
+- M3: src/ai/{prompts,lm}.ts (types-only vscode import, 6 unit tests with a fake model), streaming into a read-only `readloudly-ai:` Markdown doc then reading it, translation picks a device voice in the target language, `@readloudly` participant, `readloudly_read_aloud` tool; 3 integration tests (no model, tool, listenText).
+- M4: Open in ReadLoudly Web (text ≤2000 / URL / PDF → dashboard upload), 3-step walkthrough, status-bar a11y label, frontend R mark as media/icon.png, README rewrite with privacy, CHANGELOG. vsix 18 files installed in Antigravity.

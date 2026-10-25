@@ -37,7 +37,8 @@ suite('ReadLoudly voices', () => {
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       // The extension host shares fetch with VS Code's own services, so only ReadLoudly calls are stubbed.
-      if (!url.startsWith('https://api.readloudly.com/')) return realFetch(input, init);
+      if (!/^https:\/\/(api.readloudly.com|attacker.example)\//.test(url))
+        return realFetch(input, init);
       calls.push({
         url,
         method: init?.method ?? 'GET',
@@ -77,7 +78,7 @@ suite('ReadLoudly voices', () => {
     await run('stop');
   });
 
-  test('a ReadLoudly voice fetches the sentence with the stored token', async () => {
+  test('a ReadLoudly voice sends the token only to the user-level API, never a workspace one', async () => {
     await select('sample.md', 2);
     await run('readSelection');
     await until(() => clipCalls().length > 0);

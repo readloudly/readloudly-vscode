@@ -87,13 +87,17 @@ export function activate(context: vscode.ExtensionContext) {
     sync();
   }
 
+  // Secret-looking files never leave the machine: not to ReadLoudly, a language model or a URL.
+  const blocked = (doc: vscode.TextDocument | undefined) => {
+    if (!isBlocked(doc)) return false;
+    void vscode.window.showWarningMessage(
+      'ReadLoudly: this file matches readloudly.neverSendGlobs, so its text is never sent anywhere.'
+    );
+    return true;
+  };
+
   async function allowPro(doc: vscode.TextDocument | undefined, texts: string[]) {
-    if (isBlocked(doc)) {
-      void vscode.window.showWarningMessage(
-        'ReadLoudly: this file matches readloudly.neverSendGlobs, so it is never sent to ReadLoudly.'
-      );
-      return false;
-    }
+    if (blocked(doc)) return false;
     if (!(await account.get())) {
       void vscode.window
         .showInformationMessage('ReadLoudly: sign in to use ReadLoudly voices.', 'Sign In')
@@ -136,7 +140,9 @@ export function activate(context: vscode.ExtensionContext) {
       }
       queue.pause();
       sync();
-      const fix = { credits: 'Get Credits', standard: 'Choose Voice', signIn: 'Sign In' }[action];
+      const fix = { credits: 'Get Credits', standard: 'Use a Standard Voice', signIn: 'Sign In' }[
+        action
+      ];
       const pick = await vscode.window.showWarningMessage(
         `ReadLoudly: ${message}`,
         fix,
@@ -144,7 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (pick === 'Get Credits')
         void vscode.env.openExternal(vscode.Uri.parse(`${webUrl()}/pricing/`));
-      else if (pick === 'Choose Voice') void chooseVoice();
+      else if (pick === 'Use a Standard Voice') void chooseVoice();
       else if (pick === 'Sign In') void account.signIn();
       else if (pick === 'Use Device Voice' && queue.status === 'paused') {
         proDenied = true;
@@ -437,6 +443,7 @@ export function activate(context: vscode.ExtensionContext) {
     const editor = editorOrWarn();
     if (!editor) return;
     const { document: doc, selection } = editor;
+    if (blocked(doc)) return;
     const text = selection.isEmpty ? doc.getText() : doc.getText(selection);
     if (!text.trim())
       return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to send.');
@@ -494,7 +501,9 @@ export function activate(context: vscode.ExtensionContext) {
   const chatHandler: vscode.ChatRequestHandler = async (request, _context, stream, token) => {
     const editor = vscode.window.activeTextEditor;
     const selected =
-      editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : '';
+      editor && !editor.selection.isEmpty && !isBlocked(editor.document)
+        ? editor.document.getText(editor.selection)
+        : '';
     const kind = request.command as Kind | 'read' | undefined;
     if (!kind) {
       stream.markdown(
@@ -608,6 +617,12 @@ export function activate(context: vscode.ExtensionContext) {
     ).map((s) => s.text);
     if (!texts.length)
       return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to export.');
+    const chars = texts.reduce((n, t) => n + t.length, 0);
+    // The same 10,000-character limit as the web app's MP3 download.
+    if (chars > 10000)
+      return void vscode.window.showWarningMessage(
+        `ReadLoudly: MP3 export takes up to 10,000 characters and this is ${chars.toLocaleString()}. Select a part of it.`
+      );
     if (!(await allowPro(doc, texts))) return;
     const target = await vscode.window.showSaveDialog({
       defaultUri:
@@ -667,6 +682,7 @@ export function activate(context: vscode.ExtensionContext) {
     const editor = editorOrWarn();
     if (!editor) return;
     const { document: doc, selection } = editor;
+    if (blocked(doc)) return;
     const text = (selection.isEmpty ? doc.getText() : doc.getText(selection)).trim();
     if (/^https?:\/\/\S+$/.test(text))
       return void open(`/dashboard/?url=${encodeURIComponent(text)}`);
@@ -779,7 +795,9 @@ export function activate(context: vscode.ExtensionContext) {
       onDidChange: aiChanged.event,
       provideTextDocumentContent: (uri) => aiText.get(uri.toString()) ?? '',
     }),
-    vscode.chat.createChatParticipant('readloudly.reader', chatHandler),
+    Object.assign(vscode.chat.createChatParticipant('readloudly.reader', chatHandler), {
+      iconPath: vscode.Uri.joinPath(context.extensionUri, 'media', 'icon.png'),
+    }),
     // Read-only for the agent: the tool only speaks the text it is given.
     vscode.lm.registerTool<{ text: string }>('readloudly_read_aloud', {
       invoke: ({ input }) => {
