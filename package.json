@@ -1,0 +1,106 @@
+{
+  "name": "readloudly-vscode",
+  "displayName": "ReadLoudly: Read Aloud",
+  "description": "Listen to any text in VS Code with the spoken sentence highlighted. Device voices are free and never send text anywhere.",
+  "version": "0.1.0",
+  "publisher": "readloudly",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/readloudly/readloudly-vscode.git" },
+  "engines": { "vscode": "^1.100.0" },
+  "categories": ["Other", "Education"],
+  "keywords": ["text to speech", "tts", "read aloud", "accessibility", "markdown"],
+  "main": "./dist/extension.js",
+  "activationEvents": ["onWebviewPanel:readloudly.player"],
+  "contributes": {
+    "commands": [
+      { "command": "readloudly.readSelection", "title": "Read Selection", "category": "ReadLoudly" },
+      { "command": "readloudly.readFile", "title": "Read File", "category": "ReadLoudly" },
+      { "command": "readloudly.readFromCursor", "title": "Read from Cursor", "category": "ReadLoudly" },
+      { "command": "readloudly.readClipboard", "title": "Read Clipboard", "category": "ReadLoudly" },
+      { "command": "readloudly.togglePause", "title": "Pause/Resume", "category": "ReadLoudly" },
+      { "command": "readloudly.stop", "title": "Stop", "category": "ReadLoudly" },
+      { "command": "readloudly.next", "title": "Next Sentence", "category": "ReadLoudly" },
+      { "command": "readloudly.previous", "title": "Previous Sentence", "category": "ReadLoudly" },
+      { "command": "readloudly.faster", "title": "Faster", "category": "ReadLoudly" },
+      { "command": "readloudly.slower", "title": "Slower", "category": "ReadLoudly" },
+      { "command": "readloudly.chooseVoice", "title": "Choose Voice", "category": "ReadLoudly" },
+      { "command": "readloudly.showPlayer", "title": "Show Player", "category": "ReadLoudly" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "readloudly.readSelection", "when": "editorHasSelection", "group": "readloudly@1" },
+        { "command": "readloudly.readFromCursor", "when": "!editorHasSelection", "group": "readloudly@2" },
+        { "command": "readloudly.readFile", "group": "readloudly@3" }
+      ]
+    },
+    "configuration": {
+      "title": "ReadLoudly",
+      "properties": {
+        "readloudly.voice": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Device voice name. Empty uses the system default. Pick one with **ReadLoudly: Choose Voice**."
+        },
+        "readloudly.speed": {
+          "type": "number",
+          "default": 1,
+          "enum": [0.75, 1, 1.25, 1.5, 2],
+          "description": "Reading speed."
+        },
+        "readloudly.followAlong": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scroll the editor to keep the spoken sentence in view."
+        },
+        "readloudly.skipCodeBlocks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip fenced code blocks when reading Markdown."
+        },
+        "readloudly.highlightColor": {
+          "type": "string",
+          "default": "readloudly.sentenceHighlight",
+          "markdownDescription": "Theme color id for the spoken sentence, for example `editor.findMatchHighlightBackground`."
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "readloudly.sentenceHighlight",
+        "description": "Background of the sentence being read aloud.",
+        "defaults": { "dark": "#00e5ff38", "light": "#00e5ff4d", "highContrast": "#00e5ff4d", "highContrastLight": "#00e5ff4d" }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "test:integration": "npm run build && vscode-test",
+    "package": "npm run build && vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,mjs,js,json,md,yaml,yml}": "prettier --write"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/mocha": "10.0.10",
+    "@types/node": "24.19.2",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-cli": "0.0.15",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.13.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
+  }
+}
