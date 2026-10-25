@@ -131,6 +131,32 @@ suite('ReadLoudly free reader', () => {
     assert.equal(await vscode.env.clipboard.readText(), 'kept');
   });
 
+  test('Read File in a notebook reads the active Markdown cell', async () => {
+    const folder = vscode.workspace.workspaceFolders![0]!.uri;
+    const notebook = await vscode.workspace.openNotebookDocument(
+      vscode.Uri.joinPath(folder, 'notes.ipynb')
+    );
+    const nbEditor = await vscode.window.showNotebookDocument(notebook);
+    nbEditor.selections = [new vscode.NotebookRange(0, 1)];
+    await vscode.commands.executeCommand('notebook.cell.edit');
+    const cell = notebook.cellAt(0).document;
+    for (let i = 0; i < 30 && vscode.window.activeTextEditor?.document !== cell; i++)
+      await new Promise((r) => setTimeout(r, 100));
+    assert.equal(
+      vscode.window.activeTextEditor?.document,
+      cell,
+      'the Markdown cell never took focus'
+    );
+    await run('readFile');
+    await run('togglePause');
+    assert.deepEqual(
+      api.highlighted().map((r) => cell.getText(r)),
+      ['Notebook notes']
+    );
+    await run('stop');
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  });
+
   test('M1 makes no network call', () => {
     assert.equal(fetches, 0);
   });
