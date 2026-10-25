@@ -33,8 +33,8 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
   (or one element) in the click and reuse it. `speechSynthesis` is not blocked.
 - **Floating windows are at least 400 x 270** (VS Code's `WindowMinimumSize`), and `app-region: drag`
   inside a webview does nothing: the window moves only by its title strip.
-- **Restoring the floating player needs a `WebviewPanelSerializer`**; with one, VS Code restores it at the
-  same bounds, compact and on top.
+- **Restoring the floating player needs a `WebviewPanelSerializer`**; with one, VS Code restores its size,
+  compact mode and on-top, but the position drifted in 1 of 2 runs (no extension API to set bounds).
 - **Moving a panel to a floating window reloads its webview**, even with `retainContextWhenHidden`. Keep
   player state in the extension host and re-send it on the webview's `boot` message.
 - **Launching VS Code from a shell inside VS Code** inherits `ELECTRON_RUN_AS_NODE=1` (VS Code starts

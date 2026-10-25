@@ -26,7 +26,8 @@ sends a real macOS mouse drag and puts the cursor back. `RESTORE=1 spike/run.sh`
 | 4b. Webview after the move | Still answers messages, but its page reloaded (2 boots): moving a panel to a new window resets webview state even with `retainContextWhenHidden`. |
 | 4c. Smallest floating window | **400 x 270.** Asking for 340 x 80 or 100 x 40 gives 400 x 270. It is VS Code's own floor for every window (`WindowMinimumSize = { WIDTH: 400, HEIGHT: 270 }` in the shipped `mainImpl.js`); an extension cannot change it. |
 | 4d. Drag the pill to move the window | **No.** The pill has `app-region: drag`, yet a real mouse drag on it left the window where it was. The same drag on the compact window's 32 px title strip moved it (control). |
-| 4e. Restore after quit and relaunch | **Yes**, with a `WebviewPanelSerializer`: the floating window came back at the exact place and size (640, 220, 480 x 320), still compact and still on top (window layer 3). Without a serializer the panel is dropped and a new window opens at the default size. |
+| 4e. Restore after quit and relaunch | **Size yes, place not always**, and only with a `WebviewPanelSerializer` (without one the panel is dropped). Run 1: back at the exact place and size (640, 220, 480 x 320), still compact and on top (window layer 3). Run 2: size kept (480 x 320) but the place moved from (1032, 200) to (1127, 374). Run 3, window never moved: it came back at 400 x 270 at a new place. Extensions have no API to set window bounds, so the player cannot fix this itself. |
+| 4f. Real OS click vs CDP gesture | Same result: a real mouse click on the button (which also proves the screen math used for 4d) played at 1.5x (4111 ms), and the replay gave fresh `NotAllowedError`, reused element `ok`, kept context `running`. |
 
 ## What this means for M1 and M2
 
@@ -37,8 +38,8 @@ sends a real macOS mouse drag and puts the cursor back. `RESTORE=1 spike/run.sh`
 - **The floating player is a 400 x 270 mini window, not a 340 x 80 pill.** The window is moved by its
   title strip, not by the pill. The pill design stays, laid out inside that window; this changes the
   approved mockup and needs the owner's sign-off.
-- **Register a `WebviewPanelSerializer` in M1.** It is what makes the floating player come back where the
-  person left it.
+- **Register a `WebviewPanelSerializer` in M1.** Without it the floating player is not restored at all;
+  with it the size comes back, the place usually but not always.
 - **Pro voices (M2): one `AudioContext` in the webview, unlocked by the first click on the player.** Later
   clips started from commands or shortcuts then play with no click. After a reload (the move to the
   floating window, or a restore) the next click unlocks it again. Host playback (`afplay`) is the fallback
