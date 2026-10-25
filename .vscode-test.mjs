@@ -6,5 +6,5 @@ export default defineConfig({
   workspaceFolder: 'test/fixtures',
   ...(process.env.VSCODE_PATH && { useInstallation: { fromPath: process.env.VSCODE_PATH } }),
   launchArgs: ['--disable-extensions'],
-  mocha: { timeout: 20000 },
+  mocha: { ui: 'tdd', timeout: 20000 },
 });

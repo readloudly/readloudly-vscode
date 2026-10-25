@@ -5,32 +5,107 @@
   "version": "0.1.0",
   "publisher": "readloudly",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/readloudly/readloudly-vscode.git" },
-  "engines": { "vscode": "^1.100.0" },
-  "categories": ["Other", "Education"],
-  "keywords": ["text to speech", "tts", "read aloud", "accessibility", "markdown"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/readloudly/readloudly-vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "Education"
+  ],
+  "keywords": [
+    "text to speech",
+    "tts",
+    "read aloud",
+    "accessibility",
+    "markdown"
+  ],
   "main": "./dist/extension.js",
-  "activationEvents": ["onWebviewPanel:readloudly.player"],
+  "activationEvents": [
+    "onWebviewPanel:readloudly.player"
+  ],
   "contributes": {
     "commands": [
-      { "command": "readloudly.readSelection", "title": "Read Selection", "category": "ReadLoudly" },
-      { "command": "readloudly.readFile", "title": "Read File", "category": "ReadLoudly" },
-      { "command": "readloudly.readFromCursor", "title": "Read from Cursor", "category": "ReadLoudly" },
-      { "command": "readloudly.readClipboard", "title": "Read Clipboard", "category": "ReadLoudly" },
-      { "command": "readloudly.togglePause", "title": "Pause/Resume", "category": "ReadLoudly" },
-      { "command": "readloudly.stop", "title": "Stop", "category": "ReadLoudly" },
-      { "command": "readloudly.next", "title": "Next Sentence", "category": "ReadLoudly" },
-      { "command": "readloudly.previous", "title": "Previous Sentence", "category": "ReadLoudly" },
-      { "command": "readloudly.faster", "title": "Faster", "category": "ReadLoudly" },
-      { "command": "readloudly.slower", "title": "Slower", "category": "ReadLoudly" },
-      { "command": "readloudly.chooseVoice", "title": "Choose Voice", "category": "ReadLoudly" },
-      { "command": "readloudly.showPlayer", "title": "Show Player", "category": "ReadLoudly" }
+      {
+        "command": "readloudly.readSelection",
+        "title": "Read Selection",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFile",
+        "title": "Read File",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFromCursor",
+        "title": "Read from Cursor",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readClipboard",
+        "title": "Read Clipboard",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.togglePause",
+        "title": "Pause/Resume",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.stop",
+        "title": "Stop",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.next",
+        "title": "Next Sentence",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.previous",
+        "title": "Previous Sentence",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.faster",
+        "title": "Faster",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.slower",
+        "title": "Slower",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.chooseVoice",
+        "title": "Choose Voice",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.showPlayer",
+        "title": "Show Player",
+        "category": "ReadLoudly"
+      }
     ],
     "menus": {
       "editor/context": [
-        { "command": "readloudly.readSelection", "when": "editorHasSelection", "group": "readloudly@1" },
-        { "command": "readloudly.readFromCursor", "when": "!editorHasSelection", "group": "readloudly@2" },
-        { "command": "readloudly.readFile", "group": "readloudly@3" }
+        {
+          "command": "readloudly.readSelection",
+          "when": "editorHasSelection",
+          "group": "readloudly@1"
+        },
+        {
+          "command": "readloudly.readFromCursor",
+          "when": "!editorHasSelection",
+          "group": "readloudly@2"
+        },
+        {
+          "command": "readloudly.readFile",
+          "group": "readloudly@3"
+        }
       ]
     },
     "configuration": {
@@ -44,7 +119,13 @@
         "readloudly.speed": {
           "type": "number",
           "default": 1,
-          "enum": [0.75, 1, 1.25, 1.5, 2],
+          "enum": [
+            0.75,
+            1,
+            1.25,
+            1.5,
+            2
+          ],
           "description": "Reading speed."
         },
         "readloudly.followAlong": {
@@ -68,7 +149,12 @@
       {
         "id": "readloudly.sentenceHighlight",
         "description": "Background of the sentence being read aloud.",
-        "defaults": { "dark": "#00e5ff38", "light": "#00e5ff4d", "highContrast": "#00e5ff4d", "highContrastLight": "#00e5ff4d" }
+        "defaults": {
+          "dark": "#00e5ff38",
+          "light": "#00e5ff4d",
+          "highContrast": "#00e5ff4d",
+          "highContrastLight": "#00e5ff4d"
+        }
       }
     ]
   },
@@ -102,5 +188,9 @@
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@vscode/vsce-sign@2.1.0": true
   }
 }
