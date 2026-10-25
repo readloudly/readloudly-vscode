@@ -72,9 +72,18 @@ async function speakKokoro(m: { token: number; text: string; rate: number; voice
     source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
-    source.onended = () =>
-      m.token === current && api.postMessage({ type: 'ended', token: m.token });
+    source.onended = () => {
+      if (m.token !== current) return;
+      clearInterval(keepalive);
+      api.postMessage({ type: 'ended', token: m.token });
+    };
     source.start();
+    // Kokoro gives no word timings, so the spoken word is estimated from the share of audio played.
+    const t0 = ctx.currentTime;
+    keepalive = window.setInterval(() => {
+      const charIndex = Math.floor(((ctx!.currentTime - t0) / buffer.duration) * m.text.length);
+      api.postMessage({ type: 'word', token: m.token, charIndex });
+    }, 150);
   } catch (e) {
     note.textContent = '';
     if (m.token === current)
@@ -98,6 +107,10 @@ function speak(m: { token: number; text: string; rate: number; voice: string }) 
     u.voice = voice;
     u.lang = voice.lang;
   }
+  u.onboundary = (e) => {
+    if (e.name === 'word' && m.token === current)
+      api.postMessage({ type: 'word', token: m.token, charIndex: e.charIndex });
+  };
   u.onend = () => {
     if (m.token !== current) return;
     clearInterval(keepalive);

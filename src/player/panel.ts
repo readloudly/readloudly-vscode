@@ -14,6 +14,7 @@ export type FromWebview =
   | { type: 'boot' }
   | { type: 'voices'; voices: Voice[] }
   | { type: 'ended'; token: number }
+  | { type: 'word'; token: number; charIndex: number }
   | { type: 'error'; token: number; error: string }
   | { type: 'cmd'; cmd: 'toggle' | 'next' | 'previous' | 'stop' | 'faster' | 'slower' }
   | { type: 'voice'; name: string };
