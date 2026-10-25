@@ -149,5 +149,5 @@ vite.config.ts.timestamp-*
 .turbo
 
 # Build output
-media/player.js
+media/player.js*
 *.vsix

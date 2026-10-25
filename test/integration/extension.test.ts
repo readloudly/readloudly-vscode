@@ -43,6 +43,7 @@ suite('ReadLoudly free reader', () => {
 
   test('Read Selection reads link text and highlights the source range', async () => {
     const line = doc.lineAt(8).range;
+    editor = await vscode.window.showTextDocument(doc);
     editor.selection = new vscode.Selection(line.start, line.end);
     await run('readSelection');
     await run('togglePause');
@@ -51,10 +52,15 @@ suite('ReadLoudly free reader', () => {
 
   test('editing the document clears the stale highlight and pauses', async () => {
     await run('readFile');
-    await editor.edit((e) => e.insert(new vscode.Position(0, 0), ' '));
+    const at = new vscode.Position(0, 0);
+    const insert = new vscode.WorkspaceEdit();
+    insert.insert(doc.uri, at, ' ');
+    await vscode.workspace.applyEdit(insert);
     assert.equal(api.status(), 'paused');
     assert.deepEqual(lit(), []);
-    await vscode.commands.executeCommand('undo');
+    const revert = new vscode.WorkspaceEdit();
+    revert.delete(doc.uri, new vscode.Range(at, at.translate(0, 1)));
+    await vscode.workspace.applyEdit(revert);
   });
 
   test('M1 makes no network call', () => {
