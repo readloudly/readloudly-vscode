@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Queue } from './player/queue.ts';
 import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
+import { kokoroVoices } from './player/voices.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
 import { splitSentences, wordAt, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
@@ -155,6 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
         speak();
       } else if (m.type === 'voices') {
         voices = m.voices;
+        lensChanged.fire();
         sync();
       } else if (m.type === 'word') {
         const s = queue.current;
@@ -223,7 +225,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   const voiceLabel = () => {
     const name = cfg().get<string>('voice', '');
-    return voices.find((v) => v.name === name)?.label ?? (name || 'System voice');
+    // Kokoro names are known before the engine lists device voices, so the lens never shows a raw id.
+    const voice = [...kokoroVoices(), ...voices].find((v) => v.name === name);
+    return voice?.label ?? (name || 'System voice');
   };
 
   // Controls sit above the line the user clicked, so reading starts and steers right where they look.
@@ -241,29 +245,27 @@ export function activate(context: vscode.ExtensionContext) {
           arguments: args,
         });
       const live = queue.status === 'playing' || queue.status === 'paused';
+      // Emoji are the only colored glyphs a CodeLens can draw; codicons and text take one theme color.
+      const pace = speed() < 1 ? '🐢' : speed() > 1 ? '🐇' : '⏱️';
       return [
         ...(live
           ? [
               queue.status === 'playing'
-                ? lens('$(debug-pause) Pause', 'togglePause', 'Pause')
-                : lens('$(play) Resume', 'togglePause', 'Resume'),
-              lens('$(debug-step-back)', 'previous', 'Previous sentence'),
-              lens('$(debug-step-over)', 'next', 'Next sentence'),
-              lens('$(debug-stop)', 'stop', 'Stop'),
+                ? lens('⏸️ Pause', 'togglePause', 'Pause')
+                : lens('▶️ Resume', 'togglePause', 'Resume'),
+              lens('⏮️', 'previous', 'Previous sentence'),
+              lens('⏭️', 'next', 'Next sentence'),
+              lens('⏹️', 'stop', 'Stop reading'),
             ]
-          : []),
-        lens('$(unmute) Read from here', 'readFromLine', 'Read aloud from this line', [
-          doc.uri,
-          line,
-        ]),
-        lens(`${speed()}×`, 'cycleSpeed', 'Change speed'),
-        lens(voiceLabel(), 'chooseVoice', 'Choose voice'),
+          : [lens('🔊 Read aloud', 'readFromLine', 'Read aloud from this line', [doc.uri, line])]),
+        lens(`${pace} ${speed()}×`, 'cycleSpeed', 'Change speed'),
+        lens(`🎙️ ${voiceLabel().replace(/ \(.*\)$/, '')}`, 'chooseVoice', 'Choose voice'),
       ];
     },
   };
 
-  // A selection brings up VS Code's lightbulb with Read aloud, right where the user is looking.
-  const READ = vscode.CodeActionKind.Empty.append('readloudly');
+  // Quick Fix kind puts Read aloud first in the lightbulb menu, as Copilot does for Explain; any other kind lands under More Actions.
+  const READ = vscode.CodeActionKind.QuickFix.append('readloudly');
   const lightbulb: vscode.CodeActionProvider = {
     provideCodeActions(_doc, range) {
       if (range.isEmpty) return [];

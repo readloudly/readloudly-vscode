@@ -14,3 +14,9 @@
 
 - Antigravity IDE 1.107 (macOS): vsix installs; speech, sentence 1→4, editor highlight, ReadLoudly panel tab, focus kept, speaks with panel hidden (CDP, isolated /tmp profile).
 - Linux (Debian bookworm arm64, xvfb, test-electron download): unit + 5 integration tests pass.
+
+## 2026-10-25 (late): line controls legibility
+
+- CodeLens items now carry an icon + verb (Read aloud from here / speed / voice; Pause, Back, Skip, Stop while live); Kokoro voice shows its name, not the raw id.
+- Lightbulb action moved to Quick Fix kind so "Read selection aloud" is first (custom kind sat under More Actions). Verified in EDH; 31 unit + 7 integration pass; reinstalled in Antigravity.
+- CodeLens color/size is theme-owned (editorCodeLens.foreground, editor.codeLensFontSize); no per-extension override exists.
