@@ -19,12 +19,14 @@ backend; AI actions (summarize, translate, explain, simplify) use the person's `
 The binding plan is `../docs/vscode-extension-build-prompt-2026-10-25.md` (milestones M0 to M4, rules,
 architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHcakns9ftbtd9E.
 
-## Status (2026-10-25)
+## Status (2026-10-26)
 
 - M0 engine spike: macOS done (`docs/engine-spike.md`); Antigravity IDE checked; Linux tests pass (voices unchecked); Windows, Cursor, Windsurf open.
-- M1 free reader on `feat/m1-free-reader`: commands, Markdown masking, sentence highlight, Web Speech
-  voices, docked player view (`src/player/panel.ts`) + status-bar hover controls. The floating window
-  from the plan was dropped (root DECISIONS.md, 2026-10-25). `spike/` is throwaway, never packaged.
+- M1 to M4 built on `feat/m1-free-reader`: CodeLens player above the clicked line/selection, read-anywhere
+  shortcut (copies the focused selection), Kokoro on-device voices; ReadLoudly voices (email sign-in, SecretStorage,
+  never-send globs, notice, credits, MP3 export); `vscode.lm` AI actions, `@readloudly`, `readloudly_read_aloud` tool;
+  Open in Web, walkthrough. Player webview lives in the Explorer (`src/player/panel.ts`); the floating window was
+  dropped (root DECISIONS, 2026-10-25). `spike/` is throwaway, never packaged. Not published.
 - Gates: `npm test` (node:test), `npm run test:integration` (needs `VSCODE_PATH` and `env -i`, see
   below), `npm run lint`, `npm run typecheck`, `npm run package`.
 
@@ -37,6 +39,10 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
   then focus goes back to the editor); `retainContextWhenHidden` keeps it speaking when the panel hides.
 - **Extensions cannot draw over the editor.** No floating pill over code; a draggable pill is only
   possible inside a webview we own (Reader view, not built).
+- **`apiUrl`/`webUrl` are `application`-scoped** so a cloned repo's workspace settings cannot redirect the
+  sign-in token; `test/fixtures/.vscode/settings.json` sets a hostile `apiUrl` to keep that tested.
+- **The extension host shares `fetch` with VS Code's own services** (experiment calls); test stubs must
+  pass non-ReadLoudly URLs through.
 - **Webview messages:** the player frame accepts only `e.origin === location.origin` (VS Code relays
   from the same-origin host frame); verified in the Extension Development Host.
 - **Launching VS Code from a shell inside VS Code** inherits `ELECTRON_RUN_AS_NODE=1` (VS Code starts

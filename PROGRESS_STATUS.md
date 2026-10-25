@@ -34,3 +34,8 @@
 
 - M3: src/ai/{prompts,lm}.ts (types-only vscode import, 6 unit tests with a fake model), streaming into a read-only `readloudly-ai:` Markdown doc then reading it, translation picks a device voice in the target language, `@readloudly` participant, `readloudly_read_aloud` tool; 3 integration tests (no model, tool, listenText).
 - M4: Open in ReadLoudly Web (text ≤2000 / URL / PDF → dashboard upload), 3-step walkthrough, status-bar a11y label, frontend R mark as media/icon.png, README rewrite with privacy, CHANGELOG. vsix 18 files installed in Antigravity.
+
+## 2026-10-26 audit against the build prompt
+
+- Fixed: apiUrl/webUrl application scope (workspace could redirect the token; regression test with hostile fixture), neverSendGlobs now also blocks AI, chat selection and Open in Web, MP3 export capped at 10,000 chars, "Use a Standard Voice" action, chat icon. Icon = frontend favicon logo (logo-icon-black-box-color-white-theme).
+- Open: README GIF (private repo breaks Marketplace images), screen-reader pause, Marketplace/Open VSX publish (owner), Windows/Linux/Cursor/Windsurf, real backend + Copilot runs.
