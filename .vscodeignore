@@ -1,7 +1,6 @@
 **
 !dist/extension.js
-!media/**
+!media/player.js
 !package.json
 !README.md
 !LICENSE
-media/*.map

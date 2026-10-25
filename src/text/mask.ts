@@ -4,7 +4,10 @@ const blank = (s: string) => s.replace(/[^\n]/g, ' ');
 function inline(line: string): string {
   return line
     .replace(/!\[[^\]]*\]\([^)]*\)/g, blank)
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, (m, text: string) => ' ' + text + ' '.repeat(m.length - text.length - 1))
+    .replace(
+      /\[([^\]]*)\]\([^)]*\)/g,
+      (m, text: string) => ' ' + text + ' '.repeat(m.length - text.length - 1)
+    )
     .replace(/<[^>\n]*>/g, blank)
     .replace(/https?:\/\/\S+/g, blank)
     .replace(/`+/g, blank)
@@ -33,14 +36,17 @@ export function maskMarkdown(src: string, skipCode: boolean): string {
     }
     if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line) || /^[\s|:-]+$/.test(line)) return blank(line);
     if (/^\s*\|/.test(line)) return inline(line.replace(/\|/g, ' '));
-    const head = /^\s{0,3}#{1,6}(\s|$)/.exec(line) ?? /^\s*([-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?/.exec(line);
+    const head =
+      /^\s{0,3}#{1,6}(\s|$)/.exec(line) ?? /^\s*([-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?/.exec(line);
     if (head) return blank(head[0]) + inline(line.slice(head[0].length).replace(/\s#+\s*$/, blank));
     hard[i] = false;
     const quote = /^\s*(>\s?)+/.exec(line)?.[0] ?? '';
     return blank(quote) + inline(line.slice(quote.length));
   });
   const soft = (i: number) => !hard[i] && out[i]!.trim() !== '';
-  return out.map((l, i) => (i === out.length - 1 ? l : l + (soft(i) && soft(i + 1) ? ' ' : '\n'))).join('');
+  return out
+    .map((l, i) => (i === out.length - 1 ? l : l + (soft(i) && soft(i + 1) ? ' ' : '\n')))
+    .join('');
 }
 
 // ponytail: a lowercase start is the only "wrapped line" signal; good enough for prose, code lines stay separate.

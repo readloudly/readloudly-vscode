@@ -71,12 +71,15 @@ function render(s: PlayerState) {
   toggle.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   for (const id of ['previous', 'next']) ($(id) as HTMLButtonElement).disabled = empty;
   $('speed-t').textContent = `${s.speed}×`;
-  $('needle').style.transform = `rotate(${Math.max(-70, Math.min(70, ((s.speed - 0.5) / 2) * 140 - 70))}deg)`;
+  $('needle').style.transform =
+    `rotate(${Math.max(-70, Math.min(70, ((s.speed - 0.5) / 2) * 140 - 70))}deg)`;
   $('time').textContent = empty ? '' : `${fmt(s.secondsLeft)} left`;
   $('track').style.transform = `scaleX(${empty ? 0 : (s.index + 1) / s.total})`;
   $('pos').textContent = empty ? 'Nothing to read yet' : `Sentence ${s.index + 1} of ${s.total}`;
   $('file').textContent = s.file;
-  $('now').textContent = empty ? 'Select text in the editor, then run ReadLoudly: Read Selection.' : s.sentence;
+  $('now').textContent = empty
+    ? 'Select text in the editor, then run ReadLoudly: Read Selection.'
+    : s.sentence;
   const select = $<HTMLSelectElement>('voice');
   select.replaceChildren(new Option('System default', ''));
   for (const v of s.voices) select.append(new Option(`${v.name} (${v.lang})`, v.name));
@@ -90,15 +93,22 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
   else if (m.type === 'state') render(m);
 });
 
-const cmd = (c: Extract<FromWebview, { type: 'cmd' }>['cmd']) => api.postMessage({ type: 'cmd', cmd: c });
-for (const id of ['toggle', 'previous', 'next', 'close'] as const) $(id).addEventListener('click', () => cmd(id));
+const cmd = (c: Extract<FromWebview, { type: 'cmd' }>['cmd']) =>
+  api.postMessage({ type: 'cmd', cmd: c });
+for (const id of ['toggle', 'previous', 'next', 'close'] as const)
+  $(id).addEventListener('click', () => cmd(id));
 $('speed').addEventListener('click', (e) => cmd(e.shiftKey ? 'slower' : 'faster'));
 $<HTMLSelectElement>('voice').addEventListener('change', (e) =>
   api.postMessage({ type: 'voice', name: (e.target as HTMLSelectElement).value })
 );
 document.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLSelectElement) return;
-  const map: Record<string, Parameters<typeof cmd>[0]> = { ' ': 'toggle', ArrowLeft: 'previous', ArrowRight: 'next', Escape: 'stop' };
+  const map: Record<string, Parameters<typeof cmd>[0]> = {
+    ' ': 'toggle',
+    ArrowLeft: 'previous',
+    ArrowRight: 'next',
+    Escape: 'stop',
+  };
   const c = map[e.key];
   if (!c || (e.key === ' ' && e.target instanceof HTMLButtonElement)) return;
   e.preventDefault();

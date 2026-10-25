@@ -3,18 +3,23 @@ import assert from 'node:assert/strict';
 import { maskMarkdown, maskPlain } from './mask.ts';
 import { splitSentences } from './sentences.ts';
 
-const md = (src: string, skipCode = true) => splitSentences(maskMarkdown(src, skipCode)).map((s) => s.text);
+const md = (src: string, skipCode = true) =>
+  splitSentences(maskMarkdown(src, skipCode)).map((s) => s.text);
 const plain = (src: string) => splitSentences(maskPlain(src)).map((s) => s.text);
 
 test('masks keep the source length so offsets map 1:1', () => {
-  const src = '---\na: 1\n---\n# Hi\n\nSee [docs](https://x.io) and **bold**.\n```js\nx()\n```\n- item\n';
+  const src =
+    '---\na: 1\n---\n# Hi\n\nSee [docs](https://x.io) and **bold**.\n```js\nx()\n```\n- item\n';
   assert.equal(maskMarkdown(src, true).length, src.length);
   assert.equal(maskMarkdown(src, false).length, src.length);
   assert.equal(maskPlain('a\nb\r\nc').length, 'a\nb\r\nc'.length);
 });
 
 test('reads a heading as its own sentence', () => {
-  assert.deepEqual(md('# Getting started\nBody text here.'), ['Getting started', 'Body text here.']);
+  assert.deepEqual(md('# Getting started\nBody text here.'), [
+    'Getting started',
+    'Body text here.',
+  ]);
 });
 
 test('skips fenced code by default and reads it when asked', () => {

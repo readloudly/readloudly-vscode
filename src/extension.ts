@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 import { Queue } from './player/queue.ts';
-import { createPanel, floatPanel, renderPanel, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
+import {
+  createPanel,
+  floatPanel,
+  renderPanel,
+  VIEW_TYPE,
+  type FromWebview,
+  type Voice,
+} from './player/panel.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
 import { splitSentences, type Sentence } from './text/sentences.ts';
 import type { ToWebview } from './webview/player.ts';
@@ -35,15 +42,20 @@ export function activate(context: vscode.ExtensionContext) {
   const post = (message: ToWebview) => void panel?.webview.postMessage(message);
   const speed = () => cfg().get<number>('speed', 1);
   const sourceEditors = () =>
-    vscode.window.visibleTextEditors.filter((e) => e.document.uri.toString() === source.uri?.toString());
+    vscode.window.visibleTextEditors.filter(
+      (e) => e.document.uri.toString() === source.uri?.toString()
+    );
 
   function sync() {
     const s = queue.current;
-    const live = s && resumeAt === undefined && (queue.status === 'playing' || queue.status === 'paused');
+    const live =
+      s && resumeAt === undefined && (queue.status === 'playing' || queue.status === 'paused');
     highlighted = [];
     for (const editor of vscode.window.visibleTextEditors) {
       const own = live && editor.document.uri.toString() === source.uri?.toString();
-      const ranges = own ? [new vscode.Range(editor.document.positionAt(s.start), editor.document.positionAt(s.end))] : [];
+      const ranges = own
+        ? [new vscode.Range(editor.document.positionAt(s.start), editor.document.positionAt(s.end))]
+        : [];
       if (own) highlighted = ranges;
       editor.setDecorations(decoration, ranges);
     }
@@ -53,7 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
         ? '$(unmute) ReadLoudly'
         : `${queue.status === 'playing' ? '$(debug-pause)' : '$(play)'} Sentence ${queue.index + 1}/${n}`;
     status.tooltip = queue.status === 'playing' ? 'ReadLoudly: pause' : 'ReadLoudly: play';
-    const words = queue.items.slice(queue.index).reduce((sum, x) => sum + x.text.split(' ').length, 0);
+    const words = queue.items
+      .slice(queue.index)
+      .reduce((sum, x) => sum + x.text.split(' ').length, 0);
     post({
       type: 'state',
       status: queue.status,
@@ -75,21 +89,36 @@ export function activate(context: vscode.ExtensionContext) {
     if (!panel) return void showPlayer();
     if (cfg().get<boolean>('followAlong', true)) {
       for (const editor of sourceEditors()) {
-        const range = new vscode.Range(editor.document.positionAt(s.start), editor.document.positionAt(s.end));
+        const range = new vscode.Range(
+          editor.document.positionAt(s.start),
+          editor.document.positionAt(s.end)
+        );
         editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
       }
     }
-    post({ type: 'speak', token: queue.token, text: s.text, rate: speed(), voice: cfg().get<string>('voice', '') });
+    post({
+      type: 'speak',
+      token: queue.token,
+      text: s.text,
+      rate: speed(),
+      voice: cfg().get<string>('voice', ''),
+    });
   }
 
   function sentencesOf(doc: vscode.TextDocument, from: number, to: number) {
     const text = doc.getText();
-    const prose = doc.languageId === 'markdown' ? maskMarkdown(text, cfg().get('skipCodeBlocks', true)) : maskPlain(text);
+    const prose =
+      doc.languageId === 'markdown'
+        ? maskMarkdown(text, cfg().get('skipCodeBlocks', true))
+        : maskPlain(text);
     return splitSentences(prose.slice(from, to), from);
   }
 
   function read(items: Sentence[], index: number, from: Source) {
-    if (!items.length) return void vscode.window.showInformationMessage('ReadLoudly: there is nothing to read here.');
+    if (!items.length)
+      return void vscode.window.showInformationMessage(
+        'ReadLoudly: there is nothing to read here.'
+      );
     source = from;
     resumeAt = undefined;
     queue.load(items, index);
@@ -99,14 +128,20 @@ export function activate(context: vscode.ExtensionContext) {
   function readDocFrom(doc: vscode.TextDocument, offset: number) {
     const all = sentencesOf(doc, 0, doc.getText().length);
     const index = all.findIndex((s) => s.end > offset);
-    if (index < 0) return void vscode.window.showInformationMessage('ReadLoudly: there is nothing after the cursor.');
+    if (index < 0)
+      return void vscode.window.showInformationMessage(
+        'ReadLoudly: there is nothing after the cursor.'
+      );
     read(all, index, { uri: doc.uri, label: label(doc) });
   }
 
   const label = (doc: vscode.TextDocument) => doc.uri.path.split('/').pop() || 'Untitled';
   const editorOrWarn = () => {
     const editor = vscode.window.activeTextEditor;
-    if (!editor) void vscode.window.showInformationMessage('ReadLoudly: open a file or select some text first.');
+    if (!editor)
+      void vscode.window.showInformationMessage(
+        'ReadLoudly: open a file or select some text first.'
+      );
     return editor;
   };
 
@@ -135,13 +170,19 @@ export function activate(context: vscode.ExtensionContext) {
       } else if (m.type === 'error' && m.token === queue.token) {
         queue.pause();
         sync();
-        void vscode.window.showWarningMessage(`ReadLoudly: the voice stopped (${m.error}). Press play to try again.`);
-      } else if (m.type === 'voice') void cfg().update('voice', m.name, vscode.ConfigurationTarget.Global);
+        void vscode.window.showWarningMessage(
+          `ReadLoudly: the voice stopped (${m.error}). Press play to try again.`
+        );
+      } else if (m.type === 'voice')
+        void cfg().update('voice', m.name, vscode.ConfigurationTarget.Global);
       else if (m.type === 'cmd') {
         if (m.cmd === 'close') {
           queue.stop();
           p.dispose();
-        } else void vscode.commands.executeCommand(`readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`);
+        } else
+          void vscode.commands.executeCommand(
+            `readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`
+          );
       }
     });
   }
@@ -152,7 +193,9 @@ export function activate(context: vscode.ExtensionContext) {
       return speak();
     }
     if (resumeAt !== undefined) {
-      const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === source.uri?.toString());
+      const doc = vscode.workspace.textDocuments.find(
+        (d) => d.uri.toString() === source.uri?.toString()
+      );
       if (doc) return readDocFrom(doc, resumeAt);
     }
     if (queue.items.length) {
@@ -172,10 +215,19 @@ export function activate(context: vscode.ExtensionContext) {
     await showPlayer();
     for (let i = 0; i < 30 && !voices.length; i++) await new Promise((r) => setTimeout(r, 100));
     const lang = vscode.env.language.split('-')[0]!;
-    const sorted = [...voices].sort((a, b) => Number(b.lang.startsWith(lang)) - Number(a.lang.startsWith(lang)));
+    const sorted = [...voices].sort(
+      (a, b) => Number(b.lang.startsWith(lang)) - Number(a.lang.startsWith(lang))
+    );
     const pick = await vscode.window.showQuickPick(
-      [{ label: 'System default', name: '' }, ...sorted.map((v) => ({ label: v.name, description: v.lang, name: v.name }))],
-      { placeHolder: voices.length ? 'Choose a device voice' : 'No device voices found in this editor' }
+      [
+        { label: 'System default', name: '' },
+        ...sorted.map((v) => ({ label: v.name, description: v.lang, name: v.name })),
+      ],
+      {
+        placeHolder: voices.length
+          ? 'Choose a device voice'
+          : 'No device voices found in this editor',
+      }
     );
     if (pick) await cfg().update('voice', pick.name, vscode.ConfigurationTarget.Global);
   }
@@ -191,17 +243,27 @@ export function activate(context: vscode.ExtensionContext) {
       if (!editor) return;
       const { document: doc, selection } = editor;
       if (selection.isEmpty) return readDocFrom(doc, doc.offsetAt(selection.active));
-      read(sentencesOf(doc, doc.offsetAt(selection.start), doc.offsetAt(selection.end)), 0, { uri: doc.uri, label: label(doc) });
+      read(sentencesOf(doc, doc.offsetAt(selection.start), doc.offsetAt(selection.end)), 0, {
+        uri: doc.uri,
+        label: label(doc),
+      });
     },
     readFile: () => {
       const editor = editorOrWarn();
-      if (editor) read(sentencesOf(editor.document, 0, editor.document.getText().length), 0, { uri: editor.document.uri, label: label(editor.document) });
+      if (editor)
+        read(sentencesOf(editor.document, 0, editor.document.getText().length), 0, {
+          uri: editor.document.uri,
+          label: label(editor.document),
+        });
     },
     readFromCursor: () => {
       const editor = editorOrWarn();
       if (editor) readDocFrom(editor.document, editor.document.offsetAt(editor.selection.active));
     },
-    readClipboard: async () => read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, { label: 'Clipboard' }),
+    readClipboard: async () =>
+      read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, {
+        label: 'Clipboard',
+      }),
     togglePause,
     stop: () => {
       queue.stop();
@@ -229,7 +291,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     status,
     { dispose: () => decoration.dispose() },
-    ...Object.entries(commands).map(([id, run]) => vscode.commands.registerCommand(`readloudly.${id}`, run)),
+    ...Object.entries(commands).map(([id, run]) =>
+      vscode.commands.registerCommand(`readloudly.${id}`, run)
+    ),
     vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
       deserializeWebviewPanel: async (p) => (panel ? p.dispose() : adopt(p)),
     }),
@@ -239,16 +303,19 @@ export function activate(context: vscode.ExtensionContext) {
         decoration.dispose();
         decoration = makeDecoration();
       }
-      if (e.affectsConfiguration('readloudly.speed') || e.affectsConfiguration('readloudly.voice')) restartIfPlaying();
+      if (e.affectsConfiguration('readloudly.speed') || e.affectsConfiguration('readloudly.voice'))
+        restartIfPlaying();
       else if (e.affectsConfiguration('readloudly')) sync();
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
       const s = queue.current;
-      if (!s || queue.status === 'idle' || resumeAt !== undefined || !e.contentChanges.length) return;
+      if (!s || queue.status === 'idle' || resumeAt !== undefined || !e.contentChanges.length)
+        return;
       if (e.document.uri.toString() !== source.uri?.toString()) return;
       // Ranges are stale after an edit: pause, and resume later from the same sentence start.
       resumeAt = e.contentChanges.reduce(
-        (at, c) => (c.rangeOffset < at ? Math.max(c.rangeOffset, at + c.text.length - c.rangeLength) : at),
+        (at, c) =>
+          c.rangeOffset < at ? Math.max(c.rangeOffset, at + c.text.length - c.rangeLength) : at,
         s.start
       );
       queue.pause();

@@ -36,7 +36,9 @@ export function renderPanel(panel: vscode.WebviewPanel, extensionUri: vscode.Uri
     enableScripts: true,
     localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
   };
-  const script = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'player.js'));
+  const script = panel.webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, 'media', 'player.js')
+  );
   panel.webview.html = html(randomBytes(16).toString('base64'), script.toString());
 }
 

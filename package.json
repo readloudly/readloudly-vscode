@@ -179,7 +179,7 @@
     "format": "prettier --write .",
     "test": "node --test \"src/**/*.test.ts\"",
     "test:integration": "npm run build && vscode-test",
-    "package": "npm run build && vsce package --no-dependencies",
+    "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run build",
     "prepare": "husky"
   },
