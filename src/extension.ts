@@ -262,6 +262,32 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
+  // A selection brings up VS Code's lightbulb with Read aloud, right where the user is looking.
+  const READ = vscode.CodeActionKind.Empty.append('readloudly');
+  const lightbulb: vscode.CodeActionProvider = {
+    provideCodeActions(_doc, range) {
+      if (range.isEmpty) return [];
+      const action = (title: string, command: string) => {
+        const a = new vscode.CodeAction(title, READ);
+        a.command = { title, command: `readloudly.${command}` };
+        return a;
+      };
+      const live = queue.status === 'playing' || queue.status === 'paused';
+      return [
+        action('Read selection aloud', 'readSelection'),
+        ...(live
+          ? [
+              action(
+                queue.status === 'playing' ? 'Pause reading' : 'Resume reading',
+                'togglePause'
+              ),
+              action('Stop reading', 'stop'),
+            ]
+          : []),
+      ];
+    },
+  };
+
   const restartIfPlaying = () => {
     if (queue.status === 'playing') queue.load(queue.items, queue.index);
     speak();
@@ -330,6 +356,9 @@ export function activate(context: vscode.ExtensionContext) {
     wordDecoration,
     lensChanged,
     vscode.languages.registerCodeLensProvider({ scheme: '*' }, lineControls),
+    vscode.languages.registerCodeActionsProvider({ scheme: '*' }, lightbulb, {
+      providedCodeActionKinds: [READ],
+    }),
     vscode.window.onDidChangeTextEditorSelection((e) => {
       if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse || !e.selections[0]!.isEmpty)
         return;
