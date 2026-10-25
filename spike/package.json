@@ -7,7 +7,7 @@
   "publisher": "readloudly",
   "engines": { "vscode": "^1.100.0" },
   "main": "./extension.js",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": ["onStartupFinished", "onWebviewPanel:readloudlySpike"],
   "contributes": {
     "commands": [{ "command": "readloudlySpike.run", "title": "ReadLoudly Spike: Run probes" }]
   }

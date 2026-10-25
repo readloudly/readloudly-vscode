@@ -21,15 +21,20 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 
 ## Status (2026-10-25)
 
-- M0 engine spike: macOS automated probes done, manual window checks and Windows/Linux open. Report:
+- M0 engine spike: macOS done (probes and window checks); Windows, Linux, Cursor, Windsurf open. Report:
   `docs/engine-spike.md`. The product scaffold (TypeScript, esbuild, lint, tests) starts with M1.
 - `spike/` is throwaway probe code: never packaged, never imported by `src/`. `spike/run.sh` opens a
   clean VS Code profile with it and writes `spike/results/<platform>.json`.
 
 ## Gotchas found so far
 
-- **Webview audio needs a click.** An MP3 Blob in `<audio>` (even muted) and `AudioContext` are blocked
-  until the webview gets a user gesture. `speechSynthesis` is not blocked.
+- **Webview audio needs a click, per element.** An MP3 Blob in `<audio>` (even muted) and `AudioContext`
+  are blocked until a user gesture, and every **new** element is blocked again. Unlock one `AudioContext`
+  (or one element) in the click and reuse it. `speechSynthesis` is not blocked.
+- **Floating windows are at least 400 x 270** (VS Code's `WindowMinimumSize`), and `app-region: drag`
+  inside a webview does nothing: the window moves only by its title strip.
+- **Restoring the floating player needs a `WebviewPanelSerializer`**; with one, VS Code restores it at the
+  same bounds, compact and on top.
 - **Moving a panel to a floating window reloads its webview**, even with `retainContextWhenHidden`. Keep
   player state in the extension host and re-send it on the webview's `boot` message.
 - **Launching VS Code from a shell inside VS Code** inherits `ELECTRON_RUN_AS_NODE=1` (VS Code starts

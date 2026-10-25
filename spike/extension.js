@@ -130,15 +130,48 @@ async function probeWebAudio(bytes) {
 }
 
 let mp3 = null;
+let keep = null;
+let ctx = null;
+const blobUrl = (b64) => URL.createObjectURL(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: "audio/mpeg" }));
 document.getElementById("click-mp3").addEventListener("click", async () => {
   if (!mp3) return log("no mp3 yet");
+  // Unlock one element and one AudioContext inside the gesture; the replay checks whether they stay usable without one.
+  keep = new Audio(blobUrl(mp3));
+  keep.muted = true;
+  keep.play().then(() => keep.pause(), (e) => log("unlock: " + e.name));
+  ctx = new AudioContext();
+  ctx.resume();
   const a = await probeAudio(mp3);
   log("after click: " + JSON.stringify(a.unmuted));
-  api.postMessage({ type: "manual", afterClick: a.unmuted });
+  api.postMessage({ type: "manual", label: "afterClick", afterClick: a.unmuted });
 });
 window.addEventListener("message", async (e) => {
   const m = e.data;
   if (m.mp3) mp3 = m.mp3;
+  if (m.type === "replay" && mp3) {
+    const fresh = (await probeAudio(mp3)).unmuted.error || "ok";
+    let reusedElement = "no click yet";
+    if (keep) {
+      keep.src = blobUrl(mp3);
+      keep.muted = false;
+      keep.playbackRate = 1.5;
+      reusedElement = await keep.play().then(() => (keep.pause(), "ok"), (e) => e.name);
+    }
+    let keptContext = "no click yet";
+    if (ctx) {
+      const src = ctx.createBufferSource();
+      src.buffer = await ctx.decodeAudioData(Uint8Array.from(atob(mp3), (c) => c.charCodeAt(0)).buffer);
+      src.connect(ctx.destination);
+      src.start();
+      const t = ctx.currentTime;
+      await wait(500);
+      src.stop();
+      keptContext = ctx.state + ", advanced " + Math.round((ctx.currentTime - t) * 1000) + " ms";
+    }
+    const out = { fresh, reusedElement, keptContext };
+    log("replay without gesture: " + JSON.stringify(out));
+    api.postMessage({ type: "manual", label: "replayNoGesture", afterClick: out });
+  }
   if (m.type === "ping") api.postMessage({ type: "pong" });
   if (m.type === "probe") {
     log("probing voices...");
@@ -203,8 +236,9 @@ async function run(context) {
   fs.writeFileSync(file, JSON.stringify(result, null, 2));
   say("wrote " + file);
   panel.webview.onDidReceiveMessage((m) => {
+    if (m.type === "quit") return vscode.commands.executeCommand("workbench.action.quit");
     if (m.type !== "manual") return;
-    result.manualAfterClick = m.afterClick;
+    result.manual = { ...result.manual, [m.label]: m.afterClick };
     fs.writeFileSync(file, JSON.stringify(result, null, 2));
     say("manual click result: " + JSON.stringify(m.afterClick));
   });
@@ -213,6 +247,14 @@ async function run(context) {
 
 exports.activate = (context) => {
   context.subscriptions.push(vscode.commands.registerCommand("readloudlySpike.run", () => run(context)));
+  // A serializer is what lets VS Code bring the floating panel back after a relaunch, as the real player will.
+  context.subscriptions.push(vscode.window.registerWebviewPanelSerializer("readloudlySpike", {
+    async deserializeWebviewPanel(panel) {
+      panel.webview.options = { enableScripts: true, localResourceRoots: [] };
+      panel.webview.html = html(panel.webview, crypto.randomBytes(16).toString("base64"), "restored");
+    },
+  }));
+  if (process.env.RL_SPIKE_RESTORE) return;
   run(context).catch((e) => vscode.window.showErrorMessage("Spike failed: " + e.message));
 };
 exports.deactivate = () => {};
