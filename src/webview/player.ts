@@ -87,6 +87,8 @@ function render(s: PlayerState) {
 }
 
 window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
+  // VS Code relays extension messages from the webview host frame, which shares this frame's origin.
+  if (e.origin !== location.origin) return;
   const m = e.data;
   if (m.type === 'speak') speak(m);
   else if (m.type === 'cancel') cancel();
