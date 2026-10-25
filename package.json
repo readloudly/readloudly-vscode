@@ -28,6 +28,19 @@
     "onWebviewPanel:readloudly.player"
   ],
   "contributes": {
+    "keybindings": [
+      {
+        "command": "readloudly.readSelection",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "readloudly.togglePause",
+        "key": "ctrl+shift+alt+space",
+        "mac": "ctrl+shift+cmd+space"
+      }
+    ],
     "commands": [
       {
         "command": "readloudly.readSelection",
