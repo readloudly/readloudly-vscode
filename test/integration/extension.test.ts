@@ -120,6 +120,17 @@ suite('ReadLoudly free reader', () => {
     assert.notEqual(api.status(), 'idle');
   });
 
+  test('Read Focused reads the selection of whatever has focus and keeps the clipboard', async () => {
+    await run('stop');
+    await vscode.env.clipboard.writeText('kept');
+    await vscode.window.showTextDocument(doc);
+    const line = doc.lineAt(2).range;
+    editor.selection = new vscode.Selection(line.start, line.end);
+    await run('readFocused');
+    assert.notEqual(api.status(), 'idle');
+    assert.equal(await vscode.env.clipboard.readText(), 'kept');
+  });
+
   test('M1 makes no network call', () => {
     assert.equal(fetches, 0);
   });

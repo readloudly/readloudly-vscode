@@ -36,6 +36,19 @@
         "when": "editorTextFocus"
       },
       {
+        "command": "readloudly.readFocused",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "when": "!editorTextFocus && !terminalFocus"
+      },
+      {
+        "command": "readloudly.readFocused",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "args": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus"
+      },
+      {
         "command": "readloudly.togglePause",
         "key": "ctrl+shift+alt+space",
         "mac": "ctrl+shift+cmd+space"
@@ -70,6 +83,11 @@
       {
         "command": "readloudly.readClipboard",
         "title": "Read Clipboard",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFocused",
+        "title": "Read Selected Text Anywhere",
         "category": "ReadLoudly"
       },
       {

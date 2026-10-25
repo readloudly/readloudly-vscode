@@ -309,6 +309,20 @@ export function activate(context: vscode.ExtensionContext) {
     },
     readClipboard: async () =>
       read(splitSentences(maskPlain(await vscode.env.clipboard.readText())), 0, {}),
+    // Chat, terminal, hovers and webviews never expose their selection, so copy it with VS Code's own command and read that.
+    readFocused: async (copy = 'editor.action.clipboardCopyAction') => {
+      // ponytail: text clipboards only; an image on the clipboard is replaced by the restored text.
+      const saved = await vscode.env.clipboard.readText();
+      await vscode.env.clipboard.writeText('');
+      await vscode.commands.executeCommand(copy);
+      const text = await vscode.env.clipboard.readText();
+      await vscode.env.clipboard.writeText(saved);
+      if (!text.trim())
+        return void vscode.window.showInformationMessage(
+          'ReadLoudly: select some text first, then press the shortcut again.'
+        );
+      read(splitSentences(maskPlain(text)), 0, {});
+    },
     togglePause,
     stop: () => {
       queue.stop();
