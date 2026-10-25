@@ -9,12 +9,12 @@ export interface Session {
 }
 
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-    readonly code?: string
-  ) {
+  readonly status: number;
+  readonly code: string | undefined;
+  constructor(status: number, message: string, code?: string) {
     super(message);
+    this.status = status;
+    this.code = code;
   }
 }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitSentences, wordAt } from './sentences.ts';
+import { capLength, splitSentences, wordAt } from './sentences.ts';
 
 const spans = (s: string, base = 0) => splitSentences(s, base).map((x) => [x.text, x.start, x.end]);
 
@@ -60,4 +60,32 @@ test('a word before dropped space-punctuation still covers the punctuation', () 
   const [s] = splitSentences('Go home .');
   assert.equal(s!.text, 'Go home.');
   assert.deepEqual(wordAt(s!, 3), [3, 9]);
+});
+
+test('capLength splits long sentences at a clause, keeping source offsets', () => {
+  const src = 'One two three, four five six; seven eight.';
+  const parts = capLength(splitSentences(src, 10), 20);
+  assert.deepEqual(
+    parts.map((p) => [p.text, p.start, p.end]),
+    [
+      ['One two three,', 10, 24],
+      ['four five six;', 25, 39],
+      ['seven eight.', 40, 52],
+    ]
+  );
+  assert.equal(parts[1]!.map[0], 25);
+  assert.ok(parts.every((p) => p.text.length <= 20));
+});
+
+test('capLength falls back to a space, then a hard cut, and leaves short sentences alone', () => {
+  assert.deepEqual(
+    capLength(splitSentences('aaaa bbbb cccc'), 10).map((p) => p.text),
+    ['aaaa bbbb', 'cccc']
+  );
+  assert.deepEqual(
+    capLength(splitSentences('abcdefghij'), 4).map((p) => p.text),
+    ['abcd', 'efgh', 'ij']
+  );
+  const short = splitSentences('Short one.');
+  assert.deepEqual(capLength(short, 100), short);
 });

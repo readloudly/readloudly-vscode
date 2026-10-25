@@ -41,3 +41,27 @@ export function wordAt(s: Sentence, charIndex: number): [number, number] {
   while (to < s.text.length && s.text[to] !== ' ') to++;
   return [s.map[from]!, s.map[to - 1]! + 1];
 }
+
+// Pro voices take at most one capped request per clip, so a long sentence becomes clause-sized pieces with their own ranges.
+export function capLength(sentences: Sentence[], max: number): Sentence[] {
+  return sentences.flatMap((s) => {
+    const out: Sentence[] = [];
+    let from = 0;
+    while (s.text.length - from > max) {
+      const window = s.text.slice(from, from + max + 1);
+      const clause = Math.max(...[', ', '; ', ': '].map((p) => window.lastIndexOf(p)));
+      const space = window.lastIndexOf(' ');
+      const cut = clause > 0 ? clause + 1 : space > 0 ? space : max;
+      out.push(piece(s, from, from + cut));
+      from += cut;
+      while (s.text[from] === ' ') from++;
+    }
+    out.push(from ? piece(s, from, s.text.length) : s);
+    return out;
+  });
+}
+
+function piece(s: Sentence, from: number, to: number): Sentence {
+  const map = s.map.slice(from, to);
+  return { text: s.text.slice(from, to), start: map[0]!, end: map[map.length - 1]! + 1, map };
+}
