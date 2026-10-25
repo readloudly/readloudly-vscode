@@ -246,22 +246,37 @@ export function activate(context: vscode.ExtensionContext) {
           arguments: args,
         });
       const live = queue.status === 'playing' || queue.status === 'paused';
-      // Emoji are the only colored glyphs a CodeLens can draw; the media-control set keeps one visual family.
+      // Material Symbols glyphs from media/icons.woff, registered in package.json under contributes.icons.
       return [
         ...(live
           ? [
               queue.status === 'playing'
-                ? lens('⏸️ Pause', 'togglePause', 'Pause')
-                : lens('▶️ Resume', 'togglePause', 'Resume'),
-              lens('⏮️', 'previous', 'Previous sentence'),
-              lens('⏭️', 'next', 'Next sentence'),
-              lens('⏹️', 'stop', 'Stop reading'),
+                ? lens('$(readloudly-pause) Pause', 'togglePause', 'Pause')
+                : lens('$(readloudly-play) Resume', 'togglePause', 'Resume'),
+              lens('$(readloudly-previous)', 'previous', 'Previous sentence'),
+              lens('$(readloudly-next)', 'next', 'Next sentence'),
+              lens('$(readloudly-stop)', 'stop', 'Stop reading'),
             ]
           : lensLine.selected
-            ? [lens('▶️ Listen to selection', 'readSelection', 'Read the selected text aloud')]
-            : [lens('▶️ Listen', 'readFromLine', 'Read aloud from this line', [doc.uri, line])]),
-        lens(`⏩ ${speed()}×`, 'cycleSpeed', 'Change speed'),
-        lens(`🎙️ ${voiceLabel().replace(/ \(.*\)$/, '')}`, 'chooseVoice', 'Choose voice'),
+            ? [
+                lens(
+                  '$(readloudly-play) Listen to selection',
+                  'readSelection',
+                  'Read the selected text aloud'
+                ),
+              ]
+            : [
+                lens('$(readloudly-play) Listen', 'readFromLine', 'Read aloud from this line', [
+                  doc.uri,
+                  line,
+                ]),
+              ]),
+        lens(`$(readloudly-speed) ${speed()}×`, 'cycleSpeed', 'Change speed'),
+        lens(
+          `$(readloudly-voice) ${voiceLabel().replace(/ \(.*\)$/, '')}`,
+          'chooseVoice',
+          'Choose voice'
+        ),
       ];
     },
   };

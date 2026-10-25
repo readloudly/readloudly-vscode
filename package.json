@@ -224,7 +224,58 @@
           "highContrastLight": "#2d5cd2"
         }
       }
-    ]
+    ],
+    "icons": {
+      "readloudly-play": {
+        "description": "ReadLoudly Play",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E037"
+        }
+      },
+      "readloudly-pause": {
+        "description": "ReadLoudly Pause",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E034"
+        }
+      },
+      "readloudly-previous": {
+        "description": "ReadLoudly Previous sentence",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E045"
+        }
+      },
+      "readloudly-next": {
+        "description": "ReadLoudly Next sentence",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E044"
+        }
+      },
+      "readloudly-stop": {
+        "description": "ReadLoudly Stop",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E047"
+        }
+      },
+      "readloudly-speed": {
+        "description": "ReadLoudly Reading speed",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E9E4"
+        }
+      },
+      "readloudly-voice": {
+        "description": "ReadLoudly Voice",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E91F"
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",

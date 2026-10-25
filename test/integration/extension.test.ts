@@ -100,7 +100,7 @@ suite('ReadLoudly free reader', () => {
       'vscode.executeCodeLensProvider',
       doc.uri
     );
-    assert.equal(plain(playing[0]!.command!.title), '▶️ Resume');
+    assert.equal(plain(playing[0]!.command!.title), '$(readloudly-play) Resume');
   });
 
   test('selecting text shows a Read selection button above it', async () => {
@@ -114,7 +114,7 @@ suite('ReadLoudly free reader', () => {
     );
     assert.deepEqual(
       [plain(first!.command!.title), first!.command!.command],
-      ['▶️ Listen to selection', 'readloudly.readSelection']
+      ['$(readloudly-play) Listen to selection', 'readloudly.readSelection']
     );
     await vscode.commands.executeCommand(first!.command!.command);
     assert.notEqual(api.status(), 'idle');
