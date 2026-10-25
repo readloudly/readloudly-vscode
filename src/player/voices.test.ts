@@ -1,6 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { goodVoices } from './voices.ts';
+import { goodVoices, kokoroVoices } from './voices.ts';
+
+test('lists only the well graded Kokoro voices, marked as on-device', () => {
+  const voices = kokoroVoices();
+  assert.equal(voices.length, 10);
+  assert.deepEqual(voices[0], {
+    name: 'kokoro:af_heart',
+    label: 'Heart (Kokoro)',
+    lang: 'en-US',
+    isDefault: false,
+  });
+  assert.ok(voices.some((v) => v.name === 'kokoro:bf_emma' && v.lang === 'en-GB'));
+  assert.ok(!voices.some((v) => v.name === 'kokoro:am_adam'));
+});
 
 const v = (name: string) => ({ name, lang: 'en-US' });
 

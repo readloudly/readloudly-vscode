@@ -213,7 +213,7 @@ export function activate(context: vscode.ExtensionContext) {
     const pick = await vscode.window.showQuickPick(
       [
         { label: 'System default', name: '' },
-        ...sorted.map((v) => ({ label: v.name, description: v.lang, name: v.name })),
+        ...sorted.map((v) => ({ label: v.label ?? v.name, description: v.lang, name: v.name })),
       ],
       {
         placeHolder: voices.length

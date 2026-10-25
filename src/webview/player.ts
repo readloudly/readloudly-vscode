@@ -1,5 +1,5 @@
 import type { FromWebview, Voice } from '../player/panel.ts';
-import { goodVoices } from '../player/voices.ts';
+import { goodVoices, kokoroVoices } from '../player/voices.ts';
 
 export interface PlayerState {
   type: 'state';
@@ -24,20 +24,72 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const synth = window.speechSynthesis;
 let current = -1;
 let keepalive = 0;
+let ctx: AudioContext | undefined;
+let source: AudioBufferSourceNode | undefined;
+let engine: Promise<typeof import('./kokoro.ts')> | undefined;
+const media = document.body.dataset.media!;
 
-const listVoices = (): Voice[] =>
-  goodVoices(synth.getVoices()).map((v) => ({ name: v.name, lang: v.lang, isDefault: v.default }));
+// Webview audio stays blocked until a click in this frame; one click unlocks this context for the session.
+document.addEventListener('click', () => void (ctx ??= new AudioContext()).resume(), true);
+
+const listVoices = (): Voice[] => [
+  ...kokoroVoices(),
+  ...goodVoices(synth.getVoices()).map((v) => ({
+    name: v.name,
+    lang: v.lang,
+    isDefault: v.default,
+  })),
+];
 const sendVoices = () => api.postMessage({ type: 'voices', voices: listVoices() });
 
 function cancel() {
   current = -1;
   clearInterval(keepalive);
   synth.cancel();
+  source?.stop();
+  source = undefined;
+}
+
+async function speakKokoro(m: { token: number; text: string; rate: number; voice: string }) {
+  const note = $('note');
+  try {
+    engine ??= import(`${media}/kokoro.js`);
+    const { samples, rate } = await (
+      await engine
+    ).generate(
+      m.text,
+      m.voice.slice('kokoro:'.length),
+      m.rate,
+      `${media}/`,
+      (t) => (note.textContent = t)
+    );
+    note.textContent = '';
+    if (m.token !== current) return;
+    ctx ??= new AudioContext();
+    if (ctx.state !== 'running') throw new Error('sound needs one click in the ReadLoudly player');
+    const buffer = ctx.createBuffer(1, samples.length, rate);
+    buffer.copyToChannel(samples, 0);
+    source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.onended = () =>
+      m.token === current && api.postMessage({ type: 'ended', token: m.token });
+    source.start();
+  } catch (e) {
+    note.textContent = '';
+    if (m.token === current)
+      api.postMessage({
+        type: 'error',
+        token: m.token,
+        error: e instanceof Error ? e.message : String(e),
+      });
+  }
 }
 
 function speak(m: { token: number; text: string; rate: number; voice: string }) {
   cancel();
   current = m.token;
+  if (m.voice.startsWith('kokoro:')) return void speakKokoro(m);
   const u = new SpeechSynthesisUtterance(m.text);
   u.rate = m.rate;
   // A voice missing on this device falls back to the system default instead of failing.
@@ -83,7 +135,7 @@ function render(s: PlayerState) {
     : s.sentence;
   const select = $<HTMLSelectElement>('voice');
   select.replaceChildren(new Option('System default', ''));
-  for (const v of s.voices) select.append(new Option(`${v.name} (${v.lang})`, v.name));
+  for (const v of s.voices) select.append(new Option(`${v.label ?? v.name} (${v.lang})`, v.name));
   select.value = s.voices.some((v) => v.name === s.voice) ? s.voice : '';
 }
 

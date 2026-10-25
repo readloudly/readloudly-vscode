@@ -7,6 +7,7 @@ export interface Voice {
   name: string;
   lang: string;
   isDefault: boolean;
+  label?: string;
 }
 
 export type FromWebview =
@@ -22,19 +23,20 @@ export function renderPlayer(webview: vscode.Webview, extensionUri: vscode.Uri) 
     enableScripts: true,
     localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
   };
-  const script = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'player.js'));
-  webview.html = html(randomBytes(16).toString('base64'), script.toString());
+  const media = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media')).toString();
+  webview.html = html(randomBytes(16).toString('base64'), media, webview.cspSource);
 }
 
 const icon = (body: string) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 
-function html(nonce: string, script: string): string {
-  const csp = `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; media-src blob:;`;
+function html(nonce: string, media: string, source: string): string {
+  // Kokoro needs its bundle and WebAssembly from media/, and the model from Hugging Face on first use.
+  const csp = `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${source} 'wasm-unsafe-eval'; connect-src ${source} https://huggingface.co https://*.hf.co; media-src blob:;`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style nonce="${nonce}">${CSS}</style></head><body>
+<style nonce="${nonce}">${CSS}</style></head><body data-media="${media}">
 <main>
   <div class="pill" role="toolbar" aria-label="ReadLoudly player">
     <button class="ib" id="previous" type="button" aria-label="Previous sentence" title="Previous sentence">${icon('<path d="m17 18-6-6 6-6"/><path d="M7 6v12"/>')}</button>
@@ -49,10 +51,11 @@ function html(nonce: string, script: string): string {
   <div class="track" aria-hidden="true"><i id="track"></i></div>
   <div class="row"><span id="pos"></span><span id="file"></span></div>
   <p class="now" id="now" aria-live="polite"></p>
+  <p class="note" id="note" aria-live="polite"></p>
   <label for="voice">Voice</label>
   <select id="voice"></select>
 </main>
-<script nonce="${nonce}" src="${script}"></script>
+<script nonce="${nonce}" src="${media}/player.js"></script>
 </body></html>`;
 }
 

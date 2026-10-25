@@ -1,6 +1,8 @@
 **
 !dist/extension.js
 !media/player.js
+!media/kokoro.js
+!media/ort-wasm-simd-threaded.jsep.*
 !media/icon.svg
 !package.json
 !README.md
