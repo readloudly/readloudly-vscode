@@ -5,5 +5,5 @@ export default tseslint.config(
   { ignores: ['dist', 'media/player.js', 'spike', '.vscode-test', 'node_modules'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  { languageOptions: { globals: { console: 'readonly' } } }
+  { files: ['*.mjs'], languageOptions: { globals: { process: 'readonly', console: 'readonly' } } }
 );
