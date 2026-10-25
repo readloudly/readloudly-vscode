@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
   let boots = 0;
   let decoration = makeDecoration();
   let word: vscode.Range[] = [];
-  let lensLine: { uri: string; line: number } | undefined;
+  let lensLine: { uri: string; line: number; selected: boolean } | undefined;
   const lensChanged = new vscode.EventEmitter<void>();
   const wordDecoration = vscode.window.createTextEditorDecorationType({
     backgroundColor: new vscode.ThemeColor('readloudly.wordHighlight'),
@@ -257,35 +257,13 @@ export function activate(context: vscode.ExtensionContext) {
               lens('⏭️', 'next', 'Next sentence'),
               lens('⏹️', 'stop', 'Stop reading'),
             ]
-          : [lens('🔊 Read aloud', 'readFromLine', 'Read aloud from this line', [doc.uri, line])]),
+          : lensLine.selected
+            ? [lens('🔊 Read selection', 'readSelection', 'Read the selected text aloud')]
+            : [
+                lens('🔊 Read aloud', 'readFromLine', 'Read aloud from this line', [doc.uri, line]),
+              ]),
         lens(`${pace} ${speed()}×`, 'cycleSpeed', 'Change speed'),
         lens(`🎙️ ${voiceLabel().replace(/ \(.*\)$/, '')}`, 'chooseVoice', 'Choose voice'),
-      ];
-    },
-  };
-
-  // Quick Fix kind puts Read aloud first in the lightbulb menu, as Copilot does for Explain; any other kind lands under More Actions.
-  const READ = vscode.CodeActionKind.QuickFix.append('readloudly');
-  const lightbulb: vscode.CodeActionProvider = {
-    provideCodeActions(_doc, range) {
-      if (range.isEmpty) return [];
-      const action = (title: string, command: string) => {
-        const a = new vscode.CodeAction(title, READ);
-        a.command = { title, command: `readloudly.${command}` };
-        return a;
-      };
-      const live = queue.status === 'playing' || queue.status === 'paused';
-      return [
-        action('Read selection aloud', 'readSelection'),
-        ...(live
-          ? [
-              action(
-                queue.status === 'playing' ? 'Pause reading' : 'Resume reading',
-                'togglePause'
-              ),
-              action('Stop reading', 'stop'),
-            ]
-          : []),
       ];
     },
   };
@@ -358,13 +336,18 @@ export function activate(context: vscode.ExtensionContext) {
     wordDecoration,
     lensChanged,
     vscode.languages.registerCodeLensProvider({ scheme: '*' }, lineControls),
-    vscode.languages.registerCodeActionsProvider({ scheme: '*' }, lightbulb, {
-      providedCodeActionKinds: [READ],
-    }),
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse || !e.selections[0]!.isEmpty)
-        return;
-      lensLine = { uri: e.textEditor.document.uri.toString(), line: e.selections[0]!.active.line };
+      const sel = e.selections[0]!;
+      const mouse = e.kind === vscode.TextEditorSelectionChangeKind.Mouse;
+      // A click or a selection moves the player; a plain cursor move only retires a stale Read selection.
+      if (!mouse && e.kind !== vscode.TextEditorSelectionChangeKind.Keyboard) return;
+      if (!mouse && sel.isEmpty) {
+        if (!lensLine?.selected) return;
+        lensLine = { ...lensLine, selected: false };
+      } else {
+        const uri = e.textEditor.document.uri.toString();
+        lensLine = { uri, line: sel.start.line, selected: !sel.isEmpty };
+      }
       lensChanged.fire();
     }),
     ...Object.entries(commands).map(([id, run]) =>
@@ -410,8 +393,8 @@ export function activate(context: vscode.ExtensionContext) {
     word: () => word,
     status: () => queue.status,
     boots: () => boots,
-    clickLine: (uri: vscode.Uri, line: number) => {
-      lensLine = { uri: uri.toString(), line };
+    clickLine: (uri: vscode.Uri, line: number, selected = false) => {
+      lensLine = { uri: uri.toString(), line, selected };
       lensChanged.fire();
     },
   };

@@ -35,7 +35,7 @@ function html(nonce: string, media: string, source: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style nonce="${nonce}">${CSS}</style></head><body data-media="${media}">
 <main>
-  <p>The voice engine runs here. Reading controls are in the editor: select text and open the lightbulb, or click a line.</p>
+  <p>The voice engine runs here. Reading controls are in the editor: click a line or select text, and the player appears right above it.</p>
   <p class="note" id="note" aria-live="polite"></p>
   <button id="unlock" type="button" hidden>Turn on sound</button>
 </main>

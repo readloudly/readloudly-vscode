@@ -98,23 +98,21 @@ suite('ReadLoudly free reader', () => {
     assert.equal(playing[0]!.command!.title, '▶️ Resume');
   });
 
-  test('selecting text puts Read aloud in the lightbulb', async () => {
+  test('selecting text shows a Read selection button above it', async () => {
     await run('stop');
     const line = doc.lineAt(8).range;
-    const actions = () =>
-      vscode.commands.executeCommand<vscode.CodeAction[]>(
-        'vscode.executeCodeActionProvider',
-        doc.uri,
-        line
-      );
-    const titles = async () =>
-      (await actions())
-        .filter((a) => a.kind?.value.startsWith('quickfix.readloudly'))
-        .map((a) => a.title);
-    assert.deepEqual(await titles(), ['Read selection aloud']);
     editor.selection = new vscode.Selection(line.start, line.end);
-    await run('readSelection');
-    assert.deepEqual(await titles(), ['Read selection aloud', 'Pause reading', 'Stop reading']);
+    api.clickLine(doc.uri, 8, true);
+    const [first] = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+      'vscode.executeCodeLensProvider',
+      doc.uri
+    );
+    assert.deepEqual(
+      [first!.command!.title, first!.command!.command],
+      ['🔊 Read selection', 'readloudly.readSelection']
+    );
+    await vscode.commands.executeCommand(first!.command!.command);
+    assert.notEqual(api.status(), 'idle');
   });
 
   test('M1 makes no network call', () => {
