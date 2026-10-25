@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitSentences } from './sentences.ts';
+import { splitSentences, wordAt } from './sentences.ts';
 
 const spans = (s: string, base = 0) => splitSentences(s, base).map((x) => [x.text, x.start, x.end]);
 
@@ -46,4 +46,18 @@ test('drops segments with no letters or digits', () => {
 
 test('collapses inner whitespace in the spoken text but not in the range', () => {
   assert.deepEqual(spans('Hello   big\tworld.'), [['Hello big world.', 0, 18]]);
+});
+
+test('maps a spoken word back to its source range', () => {
+  const src = 'Hello   big\tworld.';
+  const [s] = splitSentences(src, 10);
+  assert.deepEqual(wordAt(s!, 0), [10, 15]);
+  assert.deepEqual(wordAt(s!, 6), [18, 21]);
+  assert.deepEqual(wordAt(s!, 11), [22, 28]);
+});
+
+test('a word before dropped space-punctuation still covers the punctuation', () => {
+  const [s] = splitSentences('Go home .');
+  assert.equal(s!.text, 'Go home.');
+  assert.deepEqual(wordAt(s!, 3), [3, 9]);
 });
