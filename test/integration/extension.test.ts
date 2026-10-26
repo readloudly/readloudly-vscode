@@ -147,6 +147,23 @@ suite('ReadLoudly free reader', () => {
     assert.equal(await vscode.env.clipboard.readText(), 'kept');
   });
 
+  test('Read Focused waits for a webview copy that lands after the command returns', async () => {
+    await run('stop');
+    await vscode.env.clipboard.writeText('kept');
+    // VS Code copies from a webview by posting to its iframe, so the text arrives after executeCommand resolves.
+    const slowCopy = vscode.commands.registerCommand('readloudlyTest.slowCopy', () =>
+      setTimeout(() => void vscode.env.clipboard.writeText('Copied late from a webview.'), 150)
+    );
+    try {
+      await vscode.commands.executeCommand('readloudly.readFocused', 'readloudlyTest.slowCopy');
+      assert.notEqual(api.status(), 'idle');
+      assert.equal(await vscode.env.clipboard.readText(), 'kept');
+    } finally {
+      slowCopy.dispose();
+      await run('stop');
+    }
+  });
+
   test('Read Focused brings the hidden player back into view', async () => {
     await run('stop');
     await vscode.commands.executeCommand('workbench.view.search');
