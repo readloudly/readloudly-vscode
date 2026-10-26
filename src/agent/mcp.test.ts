@@ -142,3 +142,21 @@ test('rejects Origin, foreign Host and wrong path before running any tool', asyn
 test('non-POST on the right path is 405', async () => {
   assert.equal((await fetch(url)).status, 405);
 });
+
+test('a body over 1 MiB is cut off without running the tool, and the server keeps serving', async () => {
+  const ranBefore = ran;
+  const text = 'x'.repeat((1 << 20) + 1);
+  const body = JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name: 'echo', arguments: { text } },
+  });
+  const status = await fetch(url, { method: 'POST', body }).then(
+    (r) => r.status,
+    () => 0
+  );
+  assert.notEqual(status, 200);
+  assert.equal(ran, ranBefore);
+  assert.deepEqual((await rpc('ping')).json.result, {});
+});
