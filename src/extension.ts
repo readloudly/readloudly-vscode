@@ -996,29 +996,56 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Antigravity's agent never calls VS Code language model tools, but it does call MCP servers an extension registers.
-  const ag = (vscode as unknown as { antigravityExtensibility?: Antigravity })
-    .antigravityExtensibility;
-  if (ag?.writeMcpConfig && cfg().get<boolean>('agentTools', true))
-    void startMcp(agentTools, String(context.extension.packageJSON.version))
-      .then(({ url, server }) => {
+  // Every editor's agent chat calls MCP servers, each registered its own way; one registry per editor avoids duplicate tools.
+  const host = vscode as unknown as AgentHosts;
+  const ag = host.antigravityExtensibility;
+  const cursor = host.cursor?.mcp;
+  const McpHttp = host.McpHttpServerDefinition;
+  const version = String(context.extension.packageJSON.version);
+  const hostName = cursor?.registerServer
+    ? 'Cursor'
+    : ag?.writeMcpConfig
+      ? 'Antigravity'
+      : McpHttp && host.lm?.registerMcpServerDefinitionProvider
+        ? 'VS Code'
+        : undefined;
+  const mcp =
+    hostName && cfg().get<boolean>('agentTools', true) ? startMcp(agentTools, version) : undefined;
+  const failed = (e: unknown) =>
+    console.error(`ReadLoudly could not start its ${hostName} agent tools`, e);
+  mcp?.then(({ server }) => context.subscriptions.push({ dispose: () => server.close() }), failed);
+  if (!mcp && ag?.writeMcpConfig)
+    void Promise.resolve(ag.writeMcpConfig('readloudly', '{ "mcpServers": {} }')).then(() =>
+      ag.refreshMcpServers()
+    );
+  else if (mcp && hostName === 'Cursor')
+    void mcp.then(({ url }) => {
+      cursor!.registerServer({ name: 'readloudly', server: { url } });
+      context.subscriptions.push({ dispose: () => cursor!.unregisterServer('readloudly') });
+    }, failed);
+  else if (mcp && hostName === 'Antigravity')
+    void mcp
+      .then(({ url }) => {
         const config = JSON.stringify({ mcpServers: { readloudly: { serverUrl: url } } }, null, 2);
         // One config serves every window, so the window in use claims the agent's calls.
         const claim = async () => {
-          if ((await ag.getMcpConfig('readloudly')) === config) return;
-          await ag.writeMcpConfig('readloudly', config);
-          await ag.refreshMcpServers();
+          if ((await ag!.getMcpConfig('readloudly')) === config) return;
+          await ag!.writeMcpConfig('readloudly', config);
+          await ag!.refreshMcpServers();
         };
         context.subscriptions.push(
-          { dispose: () => server.close() },
           vscode.window.onDidChangeWindowState((w) => w.focused && void claim())
         );
         return claim();
       })
-      .catch((e) => console.error('ReadLoudly could not start its Antigravity agent tools', e));
-  else if (ag?.writeMcpConfig)
-    void Promise.resolve(ag.writeMcpConfig('readloudly', '{ "mcpServers": {} }')).then(() =>
-      ag.refreshMcpServers()
+      .catch(failed);
+  else if (mcp)
+    context.subscriptions.push(
+      host.lm!.registerMcpServerDefinitionProvider!('readloudly', {
+        provideMcpServerDefinitions: async () => [
+          new McpHttp!('ReadLoudly', vscode.Uri.parse((await mcp).url), {}, version),
+        ],
+      })
     );
 
   return {
@@ -1067,8 +1094,29 @@ function controls(playing: boolean, credits: number | undefined) {
 
 export function deactivate() {}
 
-interface Antigravity {
-  writeMcpConfig(pluginName: string, content: string): Thenable<void>;
-  getMcpConfig(pluginName: string): Thenable<string>;
-  refreshMcpServers(): Thenable<void>;
+// Each MCP API exists only in some editors (VS Code 1.101+, Cursor, Antigravity), so it is typed here and checked at runtime.
+interface AgentHosts {
+  lm?: {
+    registerMcpServerDefinitionProvider?(
+      id: string,
+      provider: { provideMcpServerDefinitions(): Thenable<unknown[]> }
+    ): vscode.Disposable;
+  };
+  McpHttpServerDefinition?: new (
+    label: string,
+    uri: vscode.Uri,
+    headers?: Record<string, string>,
+    version?: string
+  ) => unknown;
+  cursor?: {
+    mcp?: {
+      registerServer(config: { name: string; server: { url: string } }): void;
+      unregisterServer(name: string): void;
+    };
+  };
+  antigravityExtensibility?: {
+    writeMcpConfig(pluginName: string, content: string): Thenable<void>;
+    getMcpConfig(pluginName: string): Thenable<string>;
+    refreshMcpServers(): Thenable<void>;
+  };
 }
