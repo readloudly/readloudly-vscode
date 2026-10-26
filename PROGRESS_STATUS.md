@@ -44,3 +44,9 @@
 
 - Fixed: voice/neverSendGlobs application scope, agent tool never uses Pro, refresh keeps the session on 5xx, clip cache prune + eviction race, stale index after gate, 8 s speech watchdog, clipboard try/finally, AI notice, Kokoro pinned to HF 1939ad2a (esbuild PINS), player.js.map untracked, sharp override 0.35.5.
 - Tests assert on engine messages (`sent()`); fetch spy counts only extension calls. 54 unit, 14 integration on macOS + Linux. Dev-only audit highs remain (vsce msal, mocha diff/serialize-javascript).
+
+## 2026-10-26 README gif + VSIX size
+
+- README gif was broken: vsce rewrote it to private-repo raw/HEAD (404) and the details-view CSP needs public https. Now https://lcdn.readloudly.com/images/vscode/demo.gif (landing branch chore/vscode-demo-gif 19287d2, unpushed).
+- VSIX 6.12 MB -> 3.92 MB: ORT jsep wasm shipped brotli-packed, unpacked once into globalStorage (src/player/wasm.ts); WebGPU kept.
+- Gates: 55 unit, 14 integration, typecheck, lint green; headless Chromium Kokoro e2e passed (CPU path) incl. negative control. Uncommitted.

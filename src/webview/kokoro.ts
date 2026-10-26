@@ -4,7 +4,9 @@ const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 let tts: Promise<KokoroTTS> | undefined;
 
 // The GPU through WebGPU when the editor has one, otherwise the CPU through WebAssembly; text never leaves the machine.
-async function load(wasmPaths: string, progress: (note: string) => void) {
+type WasmPaths = { mjs: string; wasm: string };
+
+async function load(wasmPaths: WasmPaths, progress: (note: string) => void) {
   env.wasmPaths = wasmPaths;
   const report = (p: { status: string; file?: string; progress?: number }) =>
     p.status === 'progress' &&
@@ -35,7 +37,7 @@ export async function generate(
   text: string,
   voice: string,
   speed: number,
-  wasmPaths: string,
+  wasmPaths: WasmPaths,
   progress: (note: string) => void
 ) {
   tts ??= load(wasmPaths, progress).catch((e) => {

@@ -4,7 +4,7 @@ Listen to code comments, docs, Markdown and AI answers in VS Code, with the spok
 word highlighted in the editor. Device voices are free, need no account and never send text
 anywhere.
 
-![ReadLoudly reading a Markdown file aloud, with the spoken sentence highlighted](media/demo.gif)
+![ReadLoudly reading a Markdown file aloud, with the spoken sentence highlighted](https://lcdn.readloudly.com/images/vscode/demo.gif)
 
 ## Use it
 

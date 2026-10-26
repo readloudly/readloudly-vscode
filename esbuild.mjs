@@ -1,5 +1,6 @@
 import * as esbuild from 'esbuild';
-import { copyFileSync, readFileSync } from 'node:fs';
+import { copyFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { brotliCompressSync, constants as zlib } from 'node:zlib';
 
 const watch = process.argv.includes('--watch');
 const common = { bundle: true, sourcemap: true, logLevel: 'info', target: 'es2023' };
@@ -58,9 +59,21 @@ const builds = [
   },
 ];
 
-// ONNX Runtime loads its WebAssembly from media/ (kokoro.ts sets wasmPaths) instead of a CDN.
-for (const f of ['ort-wasm-simd-threaded.jsep.mjs', 'ort-wasm-simd-threaded.jsep.wasm'])
-  copyFileSync(`node_modules/onnxruntime-web/dist/${f}`, `media/${f}`);
+// ONNX Runtime ships in media/ instead of a CDN; its 21 MB wasm is brotli-packed and unpacked by src/player/wasm.ts.
+const ORT = 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep';
+copyFileSync(`${ORT}.mjs`, 'media/ort-wasm-simd-threaded.jsep.mjs');
+rmSync('media/ort-wasm-simd-threaded.jsep.wasm', { force: true });
+const wasm = readFileSync(`${ORT}.wasm`);
+writeFileSync(
+  'media/ort-wasm-simd-threaded.jsep.wasm.br',
+  brotliCompressSync(wasm, {
+    params: {
+      [zlib.BROTLI_PARAM_QUALITY]: zlib.BROTLI_MAX_QUALITY,
+      [zlib.BROTLI_PARAM_LGWIN]: zlib.BROTLI_MAX_WINDOW_BITS,
+      [zlib.BROTLI_PARAM_SIZE_HINT]: wasm.length,
+    },
+  })
+);
 for (const options of builds) {
   if (watch) await (await esbuild.context(options)).watch();
   else await esbuild.build(options);

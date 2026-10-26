@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { randomBytes } from 'node:crypto';
+import { inflateWasm } from './wasm.ts';
 
 export const VIEW_TYPE = 'readloudly.player';
 
@@ -18,22 +19,31 @@ export type FromWebview =
   | { type: 'error'; token: number; error: string }
   | { type: 'cmd'; cmd: 'toggle' };
 
-export function renderPlayer(webview: vscode.Webview, extensionUri: vscode.Uri) {
-  webview.options = {
-    enableScripts: true,
-    localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
-  };
-  const media = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media')).toString();
-  webview.html = html(randomBytes(16).toString('base64'), media, webview.cspSource);
+export function renderPlayer(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+  storageUri: vscode.Uri
+) {
+  const mediaUri = vscode.Uri.joinPath(extensionUri, 'media');
+  webview.options = { enableScripts: true, localResourceRoots: [mediaUri, storageUri] };
+  const media = webview.asWebviewUri(mediaUri).toString();
+  let wasm = '';
+  try {
+    const packed = vscode.Uri.joinPath(mediaUri, 'ort-wasm-simd-threaded.jsep.wasm.br').fsPath;
+    wasm = webview.asWebviewUri(vscode.Uri.file(inflateWasm(packed, storageUri.fsPath))).toString();
+  } catch (e) {
+    console.error('ReadLoudly could not unpack the Kokoro engine; device voices still work', e);
+  }
+  webview.html = html(randomBytes(16).toString('base64'), media, wasm, webview.cspSource);
 }
 
-function html(nonce: string, media: string, source: string): string {
+function html(nonce: string, media: string, wasm: string, source: string): string {
   // Kokoro needs its bundle and WebAssembly from media/, and the model from Hugging Face on first use.
   const csp = `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${source} 'wasm-unsafe-eval'; connect-src ${source} https://huggingface.co https://*.hf.co; media-src blob:;`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style nonce="${nonce}">${CSS}</style></head><body data-media="${media}">
+<style nonce="${nonce}">${CSS}</style></head><body data-media="${media}" data-wasm="${wasm}">
 <main>
   <p>The voice engine runs here. Reading controls are in the editor: click a line or select text, and the player appears right above it.</p>
   <p class="note" id="note" aria-live="polite"></p>

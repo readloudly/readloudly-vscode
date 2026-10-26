@@ -120,7 +120,7 @@ async function speakKokoro(m: { token: number; text: string; rate: number; voice
       m.text,
       m.voice.slice('kokoro:'.length),
       m.rate,
-      `${media}/`,
+      { mjs: `${media}/ort-wasm-simd-threaded.jsep.mjs`, wasm: document.body.dataset.wasm! },
       (t) => (note.textContent = t)
     );
     note.textContent = '';

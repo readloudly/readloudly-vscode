@@ -52,6 +52,8 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
   `esbuild.mjs` (`PINS`) rewrites both URLs to one Hugging Face commit and fails the build if they move.
 - **`voice` and `neverSendGlobs` are `application`-scoped too**, so a workspace cannot pick a paid voice or
   empty the never-send list; the fixture's `.vscode/settings.json` tries both.
+- **README images must be absolute public https URLs** (`https://lcdn.readloudly.com/images/vscode/…`, hosted in `landing/public/images/vscode/`): the details view CSP is `img-src https: data:` with no base URL, and vsce rewrites relative links to this private repo's `raw/HEAD`, which 404s.
+- **The VSIX stays under 5 MB by brotli-packing ORT's 21 MB jsep wasm** (`esbuild.mjs`); `src/player/wasm.ts` unpacks it once into `globalStorage`, keyed by hash. Never whitelist the raw `.wasm` in `.vscodeignore`.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
 

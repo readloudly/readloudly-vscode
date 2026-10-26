@@ -280,7 +280,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   function adopt(v: vscode.WebviewView) {
     view = v;
-    renderPlayer(v.webview, context.extensionUri);
+    renderPlayer(v.webview, context.extensionUri, context.globalStorageUri);
     v.onDidDispose(() => {
       view = undefined;
       if (queue.status === 'playing') queue.pause();
