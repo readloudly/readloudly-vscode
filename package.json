@@ -261,7 +261,7 @@
         "readloudly.agentTools": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "In Antigravity, let the agent read text aloud and control playback (read, pause, resume, stop, next, previous, voice) through a ReadLoudly tool that only listens on this computer. Applies to newly opened windows.",
+          "markdownDescription": "Let the agent chat (VS Code agent mode, Cursor, Antigravity) read text aloud and control playback (read, pause, resume, stop, next, previous, voice) through a ReadLoudly MCP server that only listens on this computer. Applies to newly opened windows.",
           "scope": "application"
         },
         "readloudly.voice": {
@@ -455,6 +455,12 @@
             "description": "Read the text or selection aloud"
           }
         ]
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "readloudly",
+        "label": "ReadLoudly"
       }
     ],
     "languageModelTools": [

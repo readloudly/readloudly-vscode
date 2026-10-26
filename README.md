@@ -57,6 +57,18 @@ read text to you.
 Without a language model (for example in Cursor or Windsurf, or without Copilot), the AI commands
 say so and the rest of the extension works as before.
 
+### Ask your editor's AI chat to read aloud
+
+The extension runs a small local MCP server, so the AI chat in **Cursor**, **Antigravity** and
+**VS Code 1.101+** (agent mode) can speak for you. Try "read your last answer aloud", "pause",
+"next", or "switch voice to Samantha". The tools are `read_aloud`, `pause`, `resume`, `stop`,
+`next`, `previous` and `set_voice`. Windsurf, Kiro, Trae and Void have no extension MCP API, so
+they are not supported.
+
+Text from the agent is always read by a free device voice and is never sent to ReadLoudly. The
+server listens only on 127.0.0.1, on a random port and secret path, and refuses browser requests.
+To turn it off, set `readloudly.agentTools` to `false`; it applies to windows you open afterwards.
+
 ## Settings
 
 | Setting                     | Default                        | What it does                                     |
@@ -67,6 +79,7 @@ say so and the rest of the extension works as before.
 | `readloudly.skipCodeBlocks` | `true`                         | Skip fenced code blocks in Markdown.             |
 | `readloudly.highlightColor` | `readloudly.sentenceHighlight` | Theme color id for the spoken sentence.          |
 | `readloudly.lineControls`   | `true`                         | Show the player above the line you click.        |
+| `readloudly.agentTools`     | `true`                         | Let your editor's AI chat read aloud.            |
 | `readloudly.neverSendGlobs` | `.env*`, keys, `*secret*`      | Files that are never sent to ReadLoudly.         |
 | `readloudly.apiUrl`         | `https://api.readloudly.com`   | ReadLoudly API; change only for a test server.   |
 | `readloudly.webUrl`         | `https://app.readloudly.com`   | ReadLoudly web app, for credits and Open in Web. |
