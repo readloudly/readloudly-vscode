@@ -50,3 +50,8 @@
 - README gif was broken: vsce rewrites media/demo.gif to this repo's raw/HEAD, which 404s while the repo is private and before the gif is on main. Link kept relative; renders once public.
 - VSIX 6.12 MB -> 3.92 MB: ORT jsep wasm shipped brotli-packed, unpacked once into globalStorage (src/player/wasm.ts); WebGPU kept.
 - Gates: 55 unit, 14 integration, typecheck, lint green; headless Chromium Kokoro e2e passed (CPU path) incl. negative control.
+
+## 2026-10-26 (panel controls)
+
+- Restored the Explorer player controls removed in 5d8d997 (PR #4, merged): play/pause, prev/next, speed, stop, progress, voice picker; kept Turn on sound.
+- New src/player/panel.test.ts guards the markup ids. Gates: typecheck, lint, 56 unit, 14 integration, VSIX 3.74 MB. Reinstalled in Antigravity.

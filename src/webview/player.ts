@@ -228,11 +228,12 @@ function render(s: PlayerState) {
     `rotate(${Math.max(-70, Math.min(70, ((s.speed - 0.5) / 2) * 140 - 70))}deg)`;
   $('time').textContent = empty ? '' : `${fmt(s.secondsLeft)} left`;
   $('track').style.transform = `scaleX(${empty ? 0 : (s.index + 1) / s.total})`;
-  $('pos').textContent = empty ? 'Nothing to read yet' : `Sentence ${s.index + 1} of ${s.total}`;
+  $('pos').textContent = empty ? '' : `${s.index + 1}/${s.total}`;
+  $('pos').title = empty ? '' : `Sentence ${s.index + 1} of ${s.total}`;
   $('file').textContent = s.file;
-  $('now').textContent = empty
-    ? 'Select text in the editor, then run ReadLoudly: Read Selection.'
-    : s.sentence;
+  const now = $('now');
+  now.textContent = empty ? 'Select text, then run ReadLoudly: Read Selection.' : s.sentence;
+  now.title = now.textContent;
   const select = $<HTMLSelectElement>('voice');
   select.replaceChildren(new Option('System default', ''));
   for (const v of s.voices) select.append(new Option(`${v.label ?? v.name} (${v.lang})`, v.name));
