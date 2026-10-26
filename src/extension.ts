@@ -7,6 +7,7 @@ import { Account } from './auth/session.ts';
 import { Queue } from './player/queue.ts';
 import { renderPlayer, VIEW_TYPE, type FromWebview, type Voice } from './player/panel.ts';
 import { kokoroVoices } from './player/voices.ts';
+import { startMcp, type Tool } from './agent/mcp.ts';
 import { disclosed, isBlocked } from './privacy.ts';
 import { maskMarkdown, maskPlain } from './text/mask.ts';
 import { capLength, splitSentences, wordAt, type Sentence } from './text/sentences.ts';
@@ -825,6 +826,86 @@ export function activate(context: vscode.ExtensionContext) {
     statusClick: () => (!view || queue.status === 'idle' ? showPlayer() : togglePause()),
   };
 
+  // An agent can pass any file's text, so it is never sent to ReadLoudly: a Pro choice reads with the device voice.
+  const readForAgent = (text: string) => {
+    const items = sentencesOfText(text, true);
+    if (!items.length) return 'There was no readable text.';
+    read(items, 0, { voice: isPro(voiceName()) ? '' : undefined });
+    void showPlayer();
+    return 'ReadLoudly is reading the text aloud to the user.';
+  };
+
+  const agentTools: Tool[] = [
+    {
+      name: 'read_aloud',
+      description:
+        'Read text aloud to the user with ReadLoudly, with an on-device voice so the text stays on this computer. Pass the exact text to speak, for example your previous reply.',
+      inputSchema: {
+        type: 'object',
+        properties: { text: { type: 'string', description: 'The text to read aloud' } },
+        required: ['text'],
+      },
+      run: (a) => readForAgent(typeof a.text === 'string' ? a.text : ''),
+    },
+    ...(
+      [
+        [
+          'pause',
+          'Pause ReadLoudly.',
+          () => queue.status === 'playing',
+          'Paused.',
+          'Nothing is playing.',
+        ],
+        [
+          'resume',
+          'Resume ReadLoudly.',
+          () => queue.status === 'paused',
+          'Resumed.',
+          'Nothing is paused.',
+        ],
+      ] as const
+    ).map(([name, description, when, done, idle]) => ({
+      name,
+      description,
+      inputSchema: { type: 'object', properties: {} },
+      run: () => (when() ? (togglePause(), done) : idle),
+    })),
+    ...(
+      [
+        ['stop', 'Stop ReadLoudly.', 'Stopped.'],
+        ['next', 'Skip to the next sentence.', 'Skipped to the next sentence.'],
+        ['previous', 'Go back to the previous sentence.', 'Went back one sentence.'],
+      ] as const
+    ).map(([name, description, done]) => ({
+      name,
+      description,
+      inputSchema: { type: 'object', properties: {} },
+      run: () => (commands[name]!(), done),
+    })),
+    {
+      name: 'set_voice',
+      description:
+        'Choose the ReadLoudly voice by name (a device or Kokoro voice). An unknown name returns the available voices.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Voice name, for example "Samantha" or "Heart"' },
+        },
+        required: ['name'],
+      },
+      run: async (a) => {
+        const want = String(a.name ?? '').toLowerCase();
+        const v = voices.find((x) =>
+          [x.name, x.label].some((n) => n?.toLowerCase().startsWith(want))
+        );
+        if (!want || !v)
+          return `No such voice. Available: ${voices.map((x) => x.label ?? x.name).join(', ')}`;
+        await cfg().update('voice', v.name, vscode.ConfigurationTarget.Global);
+        return `Voice set to ${v.label ?? v.name}.`;
+      },
+    },
+  ];
+
   status.command = 'readloudly.statusClick';
   sync();
   status.show();
@@ -844,18 +925,10 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Read-only for the agent: the tool only speaks the text it is given.
     vscode.lm.registerTool<{ text: string }>('readloudly_read_aloud', {
-      invoke: ({ input }) => {
-        const items = sentencesOfText(input.text ?? '', true);
-        // An agent can pass any file's text, so it is never sent to ReadLoudly: a Pro choice reads with the device voice.
-        if (items.length) read(items, 0, { voice: isPro(voiceName()) ? '' : undefined });
-        return new vscode.LanguageModelToolResult([
-          new vscode.LanguageModelTextPart(
-            items.length
-              ? 'ReadLoudly is reading the text aloud to the user.'
-              : 'There was no readable text.'
-          ),
-        ]);
-      },
+      invoke: ({ input }) =>
+        new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(readForAgent(input.text ?? '')),
+        ]),
     }),
     account,
     vscode.authentication.registerAuthenticationProvider('readloudly', 'ReadLoudly', account),
@@ -923,6 +996,31 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Antigravity's agent never calls VS Code language model tools, but it does call MCP servers an extension registers.
+  const ag = (vscode as unknown as { antigravityExtensibility?: Antigravity })
+    .antigravityExtensibility;
+  if (ag?.writeMcpConfig && cfg().get<boolean>('agentTools', true))
+    void startMcp(agentTools, String(context.extension.packageJSON.version))
+      .then(({ url, server }) => {
+        const config = JSON.stringify({ mcpServers: { readloudly: { serverUrl: url } } }, null, 2);
+        // One config serves every window, so the window in use claims the agent's calls.
+        const claim = async () => {
+          if ((await ag.getMcpConfig('readloudly')) === config) return;
+          await ag.writeMcpConfig('readloudly', config);
+          await ag.refreshMcpServers();
+        };
+        context.subscriptions.push(
+          { dispose: () => server.close() },
+          vscode.window.onDidChangeWindowState((w) => w.focused && void claim())
+        );
+        return claim();
+      })
+      .catch((e) => console.error('ReadLoudly could not start its Antigravity agent tools', e));
+  else if (ag?.writeMcpConfig)
+    void Promise.resolve(ag.writeMcpConfig('readloudly', '{ "mcpServers": {} }')).then(() =>
+      ag.refreshMcpServers()
+    );
+
   return {
     highlighted: () => highlighted,
     word: () => word,
@@ -968,3 +1066,9 @@ function controls(playing: boolean, credits: number | undefined) {
 }
 
 export function deactivate() {}
+
+interface Antigravity {
+  writeMcpConfig(pluginName: string, content: string): Thenable<void>;
+  getMcpConfig(pluginName: string): Thenable<string>;
+  refreshMcpServers(): Thenable<void>;
+}
