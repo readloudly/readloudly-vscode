@@ -2,7 +2,7 @@
 
 > Service-local memory for the ReadLoudly VS Code extension. The workspace root `../CLAUDE.md` and
 > `.claude/rules/*` also apply. This is its **own git repo** (`github.com/readloudly/readloudly-vscode`,
-> private) — run git inside this folder.
+> public since 2026-10-26) — run git inside this folder.
 
 ## Session log (append-only)
 
@@ -52,7 +52,8 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
   `esbuild.mjs` (`PINS`) rewrites both URLs to one Hugging Face commit and fails the build if they move.
 - **`voice` and `neverSendGlobs` are `application`-scoped too**, so a workspace cannot pick a paid voice or
   empty the never-send list; the fixture's `.vscode/settings.json` tries both.
-- **README images render only while this repo is public:** vsce rewrites `media/…` links to `github.com/readloudly/readloudly-vscode/raw/HEAD/…` (so the file must be on `main`), and the details view CSP allows only `img-src https: data:`.
+- **README images need this repo public:** vsce rewrites `media/…` links to `github.com/readloudly/readloudly-vscode/raw/HEAD/…` (so the file must be on `main`); the details view CSP allows only `img-src https: data:`.
+- **Reinstalling the same version keeps stale details** (size, date): uninstall first, then install the VSIX.
 - **The VSIX stays under 5 MB by brotli-packing ORT's 21 MB jsep wasm** (`esbuild.mjs`); `src/player/wasm.ts` unpacks it once into `globalStorage`, keyed by hash. Never whitelist the raw `.wasm` in `.vscodeignore`.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
