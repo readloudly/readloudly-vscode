@@ -1,0 +1,109 @@
+{
+  "platform": "darwin",
+  "release": "27.0.0",
+  "vscode": "1.143.0",
+  "appName": "Visual Studio Code",
+  "when": "2026-10-25T05:07:05.289Z",
+  "os": [
+    {
+      "cmd": "say",
+      "spawnMs": 2,
+      "totalMs": 5459,
+      "error": null
+    },
+    {
+      "cmd": "say",
+      "spawnMs": 3,
+      "totalMs": 3957,
+      "error": null
+    },
+    {
+      "cmd": "say",
+      "spawnMs": 2,
+      "totalMs": 4387,
+      "error": null
+    }
+  ],
+  "webview": {
+    "voices": {
+      "available": true,
+      "count": 180,
+      "waitedMs": 122,
+      "sample": [
+        "Albert (en-US, local)",
+        "Alice (it-IT, local)",
+        "Alva (sv-SE, local)",
+        "Amélie (fr-CA, local)",
+        "Amira (ms-MY, local)",
+        "Anna (de-DE, local)",
+        "Bad News (en-US, local)",
+        "Bahh (en-US, local)"
+      ],
+      "utterance": {
+        "boundaries": 9,
+        "startMs": 47,
+        "endMs": 4301,
+        "error": null
+      }
+    },
+    "audio": {
+      "unmuted": {
+        "muted": false,
+        "rate": 1.5,
+        "preservesPitch": true,
+        "duration": 6.114785,
+        "wallMs": null,
+        "error": "NotAllowedError"
+      },
+      "muted": {
+        "muted": true,
+        "rate": 1.5,
+        "preservesPitch": true,
+        "duration": 6.114785,
+        "wallMs": null,
+        "error": "NotAllowedError"
+      },
+      "autoplayPolicy": true,
+      "userActivation": false,
+      "webAudio": {
+        "stateAtCreate": "suspended",
+        "decodedSeconds": 6.11,
+        "wallMs": null,
+        "error": null,
+        "stateAfterResume": "suspended"
+      }
+    }
+  },
+  "hostAfplay": {
+    "cmd": "afplay",
+    "args": [
+      "-r",
+      "1.5"
+    ],
+    "totalMs": 4990,
+    "error": null
+  },
+  "float": {
+    "workbench.action.moveEditorToNewWindow": "ok",
+    "workbench.action.enableCompactAuxiliaryWindow": "ok",
+    "workbench.action.enableWindowAlwaysOnTop": "ok",
+    "webviewAliveAfterMove": true,
+    "webviewBoots": 2
+  },
+  "manual": {
+    "afterClick": {
+      "muted": false,
+      "rate": 1.5,
+      "preservesPitch": true,
+      "duration": 6.114785,
+      "wallMs": 4079,
+      "error": null,
+      "expectedMs": 4077
+    },
+    "replayNoGesture": {
+      "fresh": "NotAllowedError",
+      "reusedElement": "ok",
+      "keptContext": "running, advanced 501 ms"
+    }
+  }
+}
