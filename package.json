@@ -33,13 +33,13 @@
         "command": "readloudly.readSelection",
         "key": "ctrl+shift+alt+r",
         "mac": "ctrl+shift+cmd+r",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && !inChat"
       },
       {
         "command": "readloudly.readFocused",
         "key": "ctrl+shift+alt+r",
         "mac": "ctrl+shift+cmd+r",
-        "when": "!editorTextFocus && !terminalFocus"
+        "when": "(!editorTextFocus || inChat) && !terminalFocus"
       },
       {
         "command": "readloudly.readFocused",

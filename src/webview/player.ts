@@ -214,6 +214,7 @@ function speak(m: { token: number; text: string; rate: number; voice: string }) 
   keepalive = window.setInterval(() => synth.resume(), 5000);
 }
 
+const KEY = navigator.userAgent.includes('Mac') ? '⌃⇧⌘R' : 'Ctrl+Shift+Alt+R';
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 function render(s: PlayerState) {
@@ -232,7 +233,7 @@ function render(s: PlayerState) {
   $('pos').title = empty ? '' : `Sentence ${s.index + 1} of ${s.total}`;
   $('file').textContent = s.file;
   const now = $('now');
-  now.textContent = empty ? 'Select text, then run ReadLoudly: Read Selection.' : s.sentence;
+  now.textContent = empty ? `Select text in the editor or chat, then press ${KEY}.` : s.sentence;
   now.title = now.textContent;
   const select = $<HTMLSelectElement>('voice');
   select.replaceChildren(new Option('System default', ''));

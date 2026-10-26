@@ -4,7 +4,7 @@ Listen to code comments, docs, Markdown and AI answers in VS Code, with the spok
 word highlighted in the editor. Device voices are free, need no account and never send text
 anywhere.
 
-![ReadLoudly reading a Markdown file aloud, with the spoken sentence highlighted](media/demo.gif)
+![ReadLoudly reading a Markdown file aloud, with the spoken sentence highlighted and the Explorer player bar](media/demo.gif)
 
 ## Use it
 
@@ -16,8 +16,9 @@ Click any line, or select text: the player appears right above it with **Listen*
 | Read Selection (reads from the cursor if nothing selected) | `Ctrl+Shift+Cmd+R`     | `Ctrl+Shift+Alt+R`     |
 | Pause/Resume                                               | `Ctrl+Shift+Cmd+Space` | `Ctrl+Shift+Alt+Space` |
 
-The same read shortcut works on text selected in Chat, the terminal, hovers and webviews (it copies
-the selection, reads it and puts your clipboard back).
+To read a chat reply (Copilot Chat, agent panels), select the text and press the same shortcut. It
+also works on text selected in the terminal, hovers and webviews (it copies the selection, reads it
+and puts your clipboard back).
 
 Also in the Command Palette under **ReadLoudly**: Read File, Read from Cursor, Read Clipboard,
 Stop, Next/Previous Sentence, Faster, Slower, Choose Voice, Export as MP3, Open in ReadLoudly Web,
@@ -37,7 +38,8 @@ Read File.
   with **ReadLoudly: Sign In**. They use your ReadLoudly credits, and **Export as MP3** saves a
   selection or file as an audio file.
 
-The voice engine runs in the **ReadLoudly** section of the Explorer. Browsers block sound until
+The **ReadLoudly** section of the Explorer has the player (play/pause, previous/next, stop, speed
+and voice) and runs the voice engine. Browsers block sound until
 you click inside them once, so the first Kokoro or ReadLoudly voice in a session may ask you to
 click **Turn on sound** there.
 
