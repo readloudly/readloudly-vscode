@@ -59,6 +59,7 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 - **Chat input and chat code blocks are editors** (`editorTextFocus` is true), so the read shortcut uses `!inChat` to send them to `readFocused`; the chat input box itself still cannot be read.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
+- **Each editor has its own MCP registry** (Cursor `cursor.mcp`, Antigravity `writeMcpConfig`, VS Code 1.101+ `registerMcpServerDefinitionProvider`), typed locally in `AgentHosts` because @types/vscode is 1.100; register in one only to avoid duplicate tools. Windsurf/Kiro have no API.
 
 ## Contracts it consumes
 

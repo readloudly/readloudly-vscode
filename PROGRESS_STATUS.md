@@ -55,3 +55,9 @@
 
 - Restored the Explorer player controls removed in 5d8d997 (PR #4, merged): play/pause, prev/next, speed, stop, progress, voice picker; kept Turn on sound.
 - New src/player/panel.test.ts guards the markup ids. Gates: typecheck, lint, 56 unit, 14 integration, VSIX 3.74 MB. Reinstalled in Antigravity.
+
+## 2026-10-26 (agent tools in every editor)
+
+- Local MCP server (src/agent/mcp.ts, 127.0.0.1, random port and secret path) with 7 tools: read_aloud, pause, resume, stop, next, previous, set_voice; agent text always uses a free device voice.
+- Registered per editor in `AgentHosts` (Cursor cursor.mcp, Antigravity writeMcpConfig, VS Code 1.101+ registerMcpServerDefinitionProvider), one registry each to avoid duplicate tools.
+- Windsurf, Kiro, Trae, Void have no extension MCP API: unsupported by design (we do not write other apps' config). Setting `readloudly.agentTools` (default true) turns it off.
