@@ -5,6 +5,7 @@ interface Api {
   highlighted(): vscode.Range[];
   status(): string;
   boots(): number;
+  playerVisible(): boolean;
   clickLine(uri: vscode.Uri, line: number, selected?: boolean): void;
 }
 
@@ -130,6 +131,18 @@ suite('ReadLoudly free reader', () => {
     await run('readFocused');
     assert.notEqual(api.status(), 'idle');
     assert.equal(await vscode.env.clipboard.readText(), 'kept');
+  });
+
+  test('Read Focused brings the hidden player back into view', async () => {
+    await run('stop');
+    await vscode.commands.executeCommand('workbench.view.search');
+    await vscode.window.showTextDocument(doc);
+    const line = doc.lineAt(2).range;
+    editor.selection = new vscode.Selection(line.start, line.end);
+    await run('readFocused');
+    for (let i = 0; i < 30 && !api.playerVisible(); i++)
+      await new Promise((r) => setTimeout(r, 100));
+    assert.ok(api.playerVisible(), 'the player stayed hidden');
   });
 
   test('Read File in a notebook reads the active Markdown cell', async () => {
