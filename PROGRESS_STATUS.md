@@ -47,6 +47,6 @@
 
 ## 2026-10-26 README gif + VSIX size
 
-- README gif was broken: vsce rewrote it to private-repo raw/HEAD (404) and the details-view CSP needs public https. Now https://lcdn.readloudly.com/images/vscode/demo.gif (landing branch chore/vscode-demo-gif 19287d2, unpushed).
+- README gif was broken: vsce rewrites media/demo.gif to this repo's raw/HEAD, which 404s while the repo is private and before the gif is on main. Link kept relative; renders once public.
 - VSIX 6.12 MB -> 3.92 MB: ORT jsep wasm shipped brotli-packed, unpacked once into globalStorage (src/player/wasm.ts); WebGPU kept.
-- Gates: 55 unit, 14 integration, typecheck, lint green; headless Chromium Kokoro e2e passed (CPU path) incl. negative control. Uncommitted.
+- Gates: 55 unit, 14 integration, typecheck, lint green; headless Chromium Kokoro e2e passed (CPU path) incl. negative control.
