@@ -777,6 +777,8 @@ export function activate(context: vscode.ExtensionContext) {
           'ReadLoudly: select some text first, then press the shortcut again.'
         );
       read(sentencesOfText(text), 0, {});
+      // Chat and terminal text has no CodeLens, so bring the Explorer player into view without taking focus.
+      void showPlayer();
     },
     togglePause,
     stop: () => {
@@ -926,6 +928,7 @@ export function activate(context: vscode.ExtensionContext) {
     word: () => word,
     status: () => queue.status,
     boots: () => boots,
+    playerVisible: () => view?.visible ?? false,
     clickLine: (uri: vscode.Uri, line: number, selected = false) => {
       lensLine = { uri: uri.toString(), line, selected };
       lensChanged.fire();
