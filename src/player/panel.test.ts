@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const stub = `
-const uri = (p) => ({ fsPath: p, toString: () => p });
+const uri = (p) => ({ scheme: 'file', fsPath: p, toString: () => p });
 export const Uri = { file: uri, joinPath: (b, ...s) => uri([b.fsPath, ...s].join('/')) };
 `;
 
@@ -52,4 +52,28 @@ test('player webview keeps its controls and CSP', () => {
   assert.match(webview.html, /<label[^>]*for="voice"/);
   assert.match(webview.html, /<select[^>]*id="voice"/);
   assert.match(webview.html, /<meta http-equiv="Content-Security-Policy"/);
+});
+
+test('player webview roots use file: URIs even when storage is vscode-userdata', () => {
+  const webview = {
+    options: {} as { localResourceRoots?: { scheme: string; fsPath: string }[] },
+    html: '',
+    cspSource: 'vscode-webview:',
+    asWebviewUri: (u: unknown) => u,
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'rl-panel-'));
+  const storage = {
+    scheme: 'vscode-userdata',
+    fsPath: dir,
+    toString: () => `vscode-userdata:${dir}`,
+  };
+  renderPlayer(
+    webview as never,
+    uri(resolve(import.meta.dirname, '../..')) as never,
+    storage as never
+  );
+  const roots = webview.options.localResourceRoots ?? [];
+  assert.ok(roots.length > 0);
+  for (const root of roots) assert.equal(root.scheme, 'file');
+  assert.ok(roots.some((root) => root.fsPath === dir));
 });

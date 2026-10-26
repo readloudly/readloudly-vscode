@@ -26,12 +26,14 @@ export function renderPlayer(
   storageUri: vscode.Uri
 ) {
   const mediaUri = vscode.Uri.joinPath(extensionUri, 'media');
-  webview.options = { enableScripts: true, localResourceRoots: [mediaUri, storageUri] };
+  // globalStorageUri can be vscode-userdata:, which never matches the file: requests the webview makes.
+  const storageDir = vscode.Uri.file(storageUri.fsPath);
+  webview.options = { enableScripts: true, localResourceRoots: [mediaUri, storageDir] };
   const media = webview.asWebviewUri(mediaUri).toString();
   let wasm = '';
   try {
     const packed = vscode.Uri.joinPath(mediaUri, 'ort-wasm-simd-threaded.jsep.wasm.br').fsPath;
-    wasm = webview.asWebviewUri(vscode.Uri.file(inflateWasm(packed, storageUri.fsPath))).toString();
+    wasm = webview.asWebviewUri(vscode.Uri.file(inflateWasm(packed, storageDir.fsPath))).toString();
   } catch (e) {
     console.error('ReadLoudly could not unpack the Kokoro engine; device voices still work', e);
   }

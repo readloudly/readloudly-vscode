@@ -55,6 +55,7 @@ architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHc
 - **README images need this repo public:** vsce rewrites `media/…` links to `github.com/readloudly/readloudly-vscode/raw/HEAD/…` (so the file must be on `main`); the details view CSP allows only `img-src https: data:`.
 - **Reinstalling the same version keeps stale details** (size, date): uninstall first, then install the VSIX.
 - **The VSIX stays under 5 MB by brotli-packing ORT's 21 MB jsep wasm** (`esbuild.mjs`); `src/player/wasm.ts` unpacks it once into `globalStorage`, keyed by hash. Never whitelist the raw `.wasm` in `.vscodeignore`.
+- **`globalStorageUri` can be `vscode-userdata:`**, so as a webview root it never matches the `file:` request and the wasm gets HTTP 401 ("both async and sync fetching of the wasm failed"); `panel.ts` wraps it in `Uri.file(fsPath)`.
 - **Chat input and chat code blocks are editors** (`editorTextFocus` is true), so the read shortcut uses `!inChat` to send them to `readFocused`; the chat input box itself still cannot be read.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
