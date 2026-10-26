@@ -61,3 +61,8 @@
 - Local MCP server (src/agent/mcp.ts, 127.0.0.1, random port and secret path) with 7 tools: read_aloud, pause, resume, stop, next, previous, set_voice; agent text always uses a free device voice.
 - Registered per editor in `AgentHosts` (Cursor cursor.mcp, Antigravity writeMcpConfig, VS Code 1.101+ registerMcpServerDefinitionProvider), one registry each to avoid duplicate tools.
 - Windsurf, Kiro, Trae, Void have no extension MCP API: unsupported by design (we do not write other apps' config). Setting `readloudly.agentTools` (default true) turns it off.
+
+## 2026-10-26 (late): chat selection read fixes
+
+- #12: live CodeLens controls only on the document being read (chat text no longer looks like the open file); reverted the auto-committed chat paste in test/fixtures/sample.md.
+- #13: webview copy lands after executeCommand resolves; readFocused polls the clipboard up to 1 s. Verified live on the Claude Code 2.1.310 webview (0/4 to 4/4).
