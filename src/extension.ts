@@ -773,6 +773,11 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.env.clipboard.writeText('');
         await vscode.commands.executeCommand(copy);
         text = await vscode.env.clipboard.readText();
+        // A webview copies after its iframe gets VS Code's message, so wait for it; an empty selection costs one second.
+        for (let waited = 0; !text && waited < 1000; waited += 25) {
+          await new Promise((r) => setTimeout(r, 25));
+          text = await vscode.env.clipboard.readText();
+        }
       } finally {
         await vscode.env.clipboard.writeText(saved);
       }
