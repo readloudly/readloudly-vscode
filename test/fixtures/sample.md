@@ -1,9 +1,1 @@
-# Getting started
-
-ReadLoudly reads this file aloud. It skips code:
-
-```js
-const secret = 1;
-```
-
-See [the docs](https://example.com) for more.
+Hi! 👋 Ready to help with the VS Code extension or whatever you're working on. What do you need?Hi! 👋 Ready to help with the VS Code extension or whatever you're working on. What do you need?Hi! 👋 Ready to help with the VS Code extension or whatever you're working on. What do you need?Hi! 👋 Ready to help with the VS Code extension or whatever you're working on. What do you need?Hi! 👋 Ready to help with the VS Code extension or whatever you're working on. What do you need?
