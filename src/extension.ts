@@ -13,6 +13,7 @@ import { capLength, splitSentences, wordAt, type Sentence } from './text/sentenc
 import type { ToWebview } from './webview/player.ts';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+const WORDS_PER_SECOND = 2.6;
 // The backend rejects longer texts, and shorter clips start sooner.
 const MAX_CHARS = 1000;
 const PRO_VOICE = 'readloudly.proVoice';
@@ -200,6 +201,24 @@ export function activate(context: vscode.ExtensionContext) {
           ? 'ReadLoudly, not reading'
           : `ReadLoudly, ${queue.status}, sentence ${queue.index + 1} of ${n}`,
     };
+    const words = queue.items
+      .slice(queue.index)
+      .reduce((sum, x) => sum + x.text.split(' ').length, 0);
+    const voice = voiceName();
+    post({
+      type: 'state',
+      status: queue.status,
+      index: queue.index,
+      total: n,
+      speed: speed(),
+      secondsLeft: words / WORDS_PER_SECOND / speed(),
+      file: source.uri?.path.split('/').pop() ?? '',
+      sentence: s?.text ?? '',
+      voices: isPro(voice)
+        ? [{ name: voice, lang: 'ReadLoudly', isDefault: false, label: voiceLabel() }, ...voices]
+        : voices,
+      voice,
+    });
   }
 
   function speak() {
@@ -313,7 +332,12 @@ export function activate(context: vscode.ExtensionContext) {
             'Choose Voice'
           )
           .then((pick) => pick && chooseVoice());
-      } else if (m.type === 'cmd') void vscode.commands.executeCommand('readloudly.togglePause');
+      } else if (m.type === 'voice')
+        void cfg().update('voice', m.name, vscode.ConfigurationTarget.Global);
+      else if (m.type === 'cmd')
+        void vscode.commands.executeCommand(
+          `readloudly.${m.cmd === 'toggle' ? 'togglePause' : m.cmd}`
+        );
     });
   }
 
