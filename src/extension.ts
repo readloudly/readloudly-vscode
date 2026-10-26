@@ -602,7 +602,10 @@ export function activate(context: vscode.ExtensionContext) {
           command: `readloudly.${command}`,
           arguments: args,
         });
-      const live = queue.status === 'playing' || queue.status === 'paused';
+      // Playback controls only on the document being read; chat or clipboard text must not look like this file.
+      const live =
+        (queue.status === 'playing' || queue.status === 'paused') &&
+        doc.uri.toString() === source.uri?.toString();
       // Material Symbols glyphs from media/icons.woff, registered in package.json under contributes.icons.
       return [
         ...(live

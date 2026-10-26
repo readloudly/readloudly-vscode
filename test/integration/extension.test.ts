@@ -105,6 +105,20 @@ suite('ReadLoudly free reader', () => {
     assert.equal(plain(playing[0]!.command!.title), '$(readloudly-play) Resume');
   });
 
+  test('reading chat or clipboard text leaves the clicked line without playback controls', async () => {
+    await run('stop');
+    api.clickLine(doc.uri, 8);
+    await vscode.env.clipboard.writeText('Hi there. What do you need?');
+    await run('readClipboard');
+    assert.equal(api.status(), 'playing');
+    const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+      'vscode.executeCodeLensProvider',
+      doc.uri
+    );
+    assert.equal(lenses[0]!.command!.command, 'readloudly.readFromLine');
+    await run('stop');
+  });
+
   test('selecting text shows a Read selection button above it', async () => {
     await run('stop');
     const line = doc.lineAt(8).range;
