@@ -1,0 +1,7 @@
+dist
+media/player.js
+.vscode-test
+spike
+.claude/skills/openspec-*
+.claude/commands/opsx/
+package-lock.json

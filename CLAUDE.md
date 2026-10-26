@@ -19,27 +19,41 @@ backend; AI actions (summarize, translate, explain, simplify) use the person's `
 The binding plan is `../docs/vscode-extension-build-prompt-2026-10-25.md` (milestones M0 to M4, rules,
 architecture). The approved review page is https://claude.ai/artifact/4Yh8twMaHcakns9ftbtd9E.
 
-## Status (2026-10-25)
+## Status (2026-10-26)
 
-- M0 engine spike: macOS done (probes and window checks); Windows, Linux, Cursor, Windsurf open. Report:
-  `docs/engine-spike.md`. The product scaffold (TypeScript, esbuild, lint, tests) starts with M1.
-- `spike/` is throwaway probe code: never packaged, never imported by `src/`. `spike/run.sh` opens a
-  clean VS Code profile with it and writes `spike/results/<platform>.json`.
+- M0 engine spike: macOS done (`docs/engine-spike.md`); Antigravity IDE checked; Linux tests pass in Docker (voices unchecked); Windows, Cursor, Windsurf open.
+- M1 to M4 built on `feat/m1-free-reader`: CodeLens player above the clicked line/selection, read-anywhere
+  shortcut (copies the focused selection), Kokoro on-device voices; ReadLoudly voices (email sign-in, SecretStorage,
+  never-send globs, notice, credits, MP3 export); `vscode.lm` AI actions, `@readloudly`, `readloudly_read_aloud` tool;
+  Open in Web, walkthrough. Player webview lives in the Explorer (`src/player/panel.ts`); the floating window was
+  dropped (root DECISIONS, 2026-10-25). `spike/` is throwaway, never packaged. Not published.
+- Gates: `npm test` (node:test), `npm run test:integration` (needs `VSCODE_PATH` and `env -i`, see
+  below), `npm run lint`, `npm run typecheck`, `npm run package`.
 
 ## Gotchas found so far
 
 - **Webview audio needs a click, per element.** An MP3 Blob in `<audio>` (even muted) and `AudioContext`
   are blocked until a user gesture, and every **new** element is blocked again. Unlock one `AudioContext`
   (or one element) in the click and reuse it. `speechSynthesis` is not blocked.
-- **Floating windows are at least 400 x 270** (VS Code's `WindowMinimumSize`), and `app-region: drag`
-  inside a webview does nothing: the window moves only by its title strip.
-- **Restoring the floating player needs a `WebviewPanelSerializer`**; with one, VS Code restores its size,
-  compact mode and on-top, but the position drifted in 1 of 2 runs (no extension API to set bounds).
-- **Moving a panel to a floating window reloads its webview**, even with `retainContextWhenHidden`. Keep
-  player state in the extension host and re-send it on the webview's `boot` message.
+- **The player view's webview is the speech engine.** It must be resolved once (`readloudly.player.focus`,
+  then focus goes back to the editor); `retainContextWhenHidden` keeps it speaking when the panel hides.
+- **Extensions cannot draw over the editor.** No floating pill over code; a draggable pill is only
+  possible inside a webview we own (Reader view, not built).
+- **`apiUrl`/`webUrl` are `application`-scoped** so a cloned repo's workspace settings cannot redirect the
+  sign-in token; `test/fixtures/.vscode/settings.json` sets a hostile `apiUrl` to keep that tested.
+- **The extension host shares `fetch` with VS Code's own services** (experiment calls); test stubs must
+  pass non-ReadLoudly URLs through.
+- **Webview messages:** the player frame accepts only `e.origin === location.origin` (VS Code relays
+  from the same-origin host frame); verified in the Extension Development Host.
 - **Launching VS Code from a shell inside VS Code** inherits `ELECTRON_RUN_AS_NODE=1` (VS Code starts
   as plain Node and exits) and a long `--user-data-dir` breaks the IPC socket on macOS (104-char limit).
   `spike/run.sh` handles both with `env -i` and `/tmp/rl-spike-profile`.
+- **Kokoro is pinned at build time.** kokoro-js ignores `revision` and hardcodes `resolve/main/voices`, so
+  `esbuild.mjs` (`PINS`) rewrites both URLs to one Hugging Face commit and fails the build if they move.
+- **`voice` and `neverSendGlobs` are `application`-scoped too**, so a workspace cannot pick a paid voice or
+  empty the never-send list; the fixture's `.vscode/settings.json` tries both.
+- **README images render only while this repo is public:** vsce rewrites `media/…` links to `github.com/readloudly/readloudly-vscode/raw/HEAD/…` (so the file must be on `main`), and the details view CSP allows only `img-src https: data:`.
+- **The VSIX stays under 5 MB by brotli-packing ORT's 21 MB jsep wasm** (`esbuild.mjs`); `src/player/wasm.ts` unpacks it once into `globalStorage`, keyed by hash. Never whitelist the raw `.wasm` in `.vscodeignore`.
 - **OS speech commands** take the text as one argv entry (`say`, `spd-say`) or an env var (PowerShell),
   through `execFile` — never a shell string.
 

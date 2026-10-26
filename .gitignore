@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Build output
+media/player.js*
+media/kokoro.js
+media/ort-wasm-*
+*.vsix

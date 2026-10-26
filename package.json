@@ -1,0 +1,566 @@
+{
+  "name": "readloudly-vscode",
+  "displayName": "ReadLoudly: Read Aloud",
+  "description": "Listen to any text in VS Code with the spoken sentence highlighted. Free device voices never send text anywhere; ReadLoudly voices and AI summaries are optional.",
+  "version": "0.1.0",
+  "publisher": "readloudly",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/readloudly/readloudly-vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "Education"
+  ],
+  "keywords": [
+    "text to speech",
+    "tts",
+    "read aloud",
+    "accessibility",
+    "markdown"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "keybindings": [
+      {
+        "command": "readloudly.readSelection",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "readloudly.readFocused",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "when": "!editorTextFocus && !terminalFocus"
+      },
+      {
+        "command": "readloudly.readFocused",
+        "key": "ctrl+shift+alt+r",
+        "mac": "ctrl+shift+cmd+r",
+        "args": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus"
+      },
+      {
+        "command": "readloudly.togglePause",
+        "key": "ctrl+shift+alt+space",
+        "mac": "ctrl+shift+cmd+space"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "readloudly.player",
+          "name": "ReadLoudly",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "readloudly.readSelection",
+        "title": "Read Selection",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFile",
+        "title": "Read File",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFromCursor",
+        "title": "Read from Cursor",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readClipboard",
+        "title": "Read Clipboard",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFocused",
+        "title": "Read Selected Text Anywhere",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.togglePause",
+        "title": "Pause/Resume",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.stop",
+        "title": "Stop",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.next",
+        "title": "Next Sentence",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.previous",
+        "title": "Previous Sentence",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.faster",
+        "title": "Faster",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.slower",
+        "title": "Slower",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.chooseVoice",
+        "title": "Choose Voice",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.showPlayer",
+        "title": "Show Player",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.readFromLine",
+        "title": "Read from Here",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.cycleSpeed",
+        "title": "Change Speed",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.exportMp3",
+        "title": "Export as MP3",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.signIn",
+        "title": "Sign In",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.signOut",
+        "title": "Sign Out",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.summarizeAndListen",
+        "title": "Summarize and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.translateAndListen",
+        "title": "Translate and Listen…",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.explainAndListen",
+        "title": "Explain and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.simplifyAndListen",
+        "title": "Simplify and Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.listenText",
+        "title": "Listen",
+        "category": "ReadLoudly"
+      },
+      {
+        "command": "readloudly.openInWeb",
+        "title": "Open in ReadLoudly Web",
+        "category": "ReadLoudly"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "readloudly.readSelection",
+          "when": "editorHasSelection",
+          "group": "readloudly@1"
+        },
+        {
+          "command": "readloudly.readFromCursor",
+          "when": "!editorHasSelection",
+          "group": "readloudly@2"
+        },
+        {
+          "command": "readloudly.readFile",
+          "group": "readloudly@3"
+        },
+        {
+          "command": "readloudly.exportMp3",
+          "group": "readloudly@4"
+        },
+        {
+          "submenu": "readloudly.ai",
+          "group": "readloudly@5"
+        },
+        {
+          "command": "readloudly.openInWeb",
+          "group": "readloudly@6"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "readloudly.readFromLine",
+          "when": "false"
+        },
+        {
+          "command": "readloudly.cycleSpeed",
+          "when": "false"
+        },
+        {
+          "command": "readloudly.listenText",
+          "when": "false"
+        }
+      ],
+      "readloudly.ai": [
+        {
+          "command": "readloudly.summarizeAndListen",
+          "group": "ai@1"
+        },
+        {
+          "command": "readloudly.translateAndListen",
+          "group": "ai@2"
+        },
+        {
+          "command": "readloudly.explainAndListen",
+          "group": "ai@3"
+        },
+        {
+          "command": "readloudly.simplifyAndListen",
+          "group": "ai@4"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "readloudly.openInWeb",
+          "when": "resourceExtname == .pdf",
+          "group": "navigation@90"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ReadLoudly",
+      "properties": {
+        "readloudly.voice": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Voice name. Empty uses the system default; `rl:` voices are ReadLoudly voices and need sign-in. Pick one with **ReadLoudly: Choose Voice**.",
+          "scope": "application"
+        },
+        "readloudly.speed": {
+          "type": "number",
+          "default": 1,
+          "enum": [
+            0.75,
+            1,
+            1.25,
+            1.5,
+            2
+          ],
+          "description": "Reading speed."
+        },
+        "readloudly.followAlong": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scroll the editor to keep the spoken sentence in view."
+        },
+        "readloudly.skipCodeBlocks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip fenced code blocks when reading Markdown."
+        },
+        "readloudly.highlightColor": {
+          "type": "string",
+          "default": "readloudly.sentenceHighlight",
+          "markdownDescription": "Theme color id for the spoken sentence, for example `editor.findMatchHighlightBackground`."
+        },
+        "readloudly.lineControls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show play controls above the line you click."
+        },
+        "readloudly.neverSendGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.env*",
+            "**/*.pem",
+            "**/*.key",
+            "**/id_rsa*",
+            "**/*secret*",
+            "**/*.p12"
+          ],
+          "description": "Files matching these globs are never sent anywhere (ReadLoudly, a language model or a web link); the device voice reads them. User settings only, so a workspace cannot turn the protection off.",
+          "scope": "application"
+        },
+        "readloudly.apiUrl": {
+          "type": "string",
+          "default": "https://api.readloudly.com",
+          "description": "ReadLoudly API address. Change it only for a test server. User settings only: a workspace cannot change where your sign-in is sent.",
+          "scope": "application"
+        },
+        "readloudly.webUrl": {
+          "type": "string",
+          "default": "https://app.readloudly.com",
+          "description": "ReadLoudly web app address, used for buying credits and opening documents.",
+          "scope": "application"
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "readloudly.sentenceHighlight",
+        "description": "Background of the sentence being read aloud.",
+        "defaults": {
+          "dark": "#00e5ff38",
+          "light": "#00e5ff4d",
+          "highContrast": "#00e5ff4d",
+          "highContrastLight": "#00e5ff4d"
+        }
+      },
+      {
+        "id": "readloudly.wordHighlight",
+        "description": "Background of the word being read aloud.",
+        "defaults": {
+          "dark": "#93c5fd59",
+          "light": "#2d5cd240",
+          "highContrast": "#93c5fd59",
+          "highContrastLight": "#2d5cd240"
+        }
+      },
+      {
+        "id": "readloudly.wordBorder",
+        "description": "Border of the word being read aloud.",
+        "defaults": {
+          "dark": "#93c5fd",
+          "light": "#2d5cd2",
+          "highContrast": "#93c5fd",
+          "highContrastLight": "#2d5cd2"
+        }
+      }
+    ],
+    "icons": {
+      "readloudly-play": {
+        "description": "ReadLoudly Play",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E037"
+        }
+      },
+      "readloudly-pause": {
+        "description": "ReadLoudly Pause",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E034"
+        }
+      },
+      "readloudly-previous": {
+        "description": "ReadLoudly Previous sentence",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E045"
+        }
+      },
+      "readloudly-next": {
+        "description": "ReadLoudly Next sentence",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E044"
+        }
+      },
+      "readloudly-stop": {
+        "description": "ReadLoudly Stop",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E047"
+        }
+      },
+      "readloudly-speed": {
+        "description": "ReadLoudly Reading speed",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E9E4"
+        }
+      },
+      "readloudly-voice": {
+        "description": "ReadLoudly Voice",
+        "default": {
+          "fontPath": "./media/icons.woff",
+          "fontCharacter": "\\E91F"
+        }
+      }
+    },
+    "authentication": [
+      {
+        "id": "readloudly",
+        "label": "ReadLoudly"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "readloudly.ai",
+        "label": "ReadLoudly AI"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "readloudly.reader",
+        "name": "readloudly",
+        "fullName": "ReadLoudly",
+        "description": "Summarize, translate, explain or simplify text, then listen to it",
+        "commands": [
+          {
+            "name": "summarize",
+            "description": "Summarize the text or selection"
+          },
+          {
+            "name": "translate",
+            "description": "Translate into a language, for example /translate Spanish"
+          },
+          {
+            "name": "explain",
+            "description": "Explain code or prose in plain words"
+          },
+          {
+            "name": "simplify",
+            "description": "Rewrite at a simpler reading level"
+          },
+          {
+            "name": "read",
+            "description": "Read the text or selection aloud"
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "readloudly_read_aloud",
+        "displayName": "Read Aloud",
+        "toolReferenceName": "readAloud",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "Read text aloud to you with ReadLoudly.",
+        "modelDescription": "Reads the given text aloud to the user on this computer. The text is spoken by a device voice and is never sent to a server by this tool. Use it when the user asks to hear text, an answer or a summary.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The plain text or Markdown to read aloud."
+            }
+          },
+          "required": [
+            "text"
+          ]
+        }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "readloudly.start",
+        "title": "Get started with ReadLoudly",
+        "description": "Listen to code, docs and answers in three steps.",
+        "steps": [
+          {
+            "id": "read",
+            "title": "Read a selection",
+            "description": "Select text and press the shortcut, or click a line.\n[Read the selection](command:readloudly.readSelection)",
+            "media": {
+              "markdown": "media/walkthrough/read.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.readSelection",
+              "onCommand:readloudly.readFromLine"
+            ]
+          },
+          {
+            "id": "voice",
+            "title": "Choose a voice",
+            "description": "Pick a device voice, a Kokoro voice or a ReadLoudly voice.\n[Choose a voice](command:readloudly.chooseVoice)",
+            "media": {
+              "markdown": "media/walkthrough/voice.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.chooseVoice"
+            ]
+          },
+          {
+            "id": "pro",
+            "title": "Sign in for ReadLoudly voices",
+            "description": "Optional: natural cloud voices and MP3 export.\n[Sign in](command:readloudly.signIn)",
+            "media": {
+              "markdown": "media/walkthrough/pro.md"
+            },
+            "completionEvents": [
+              "onCommand:readloudly.signIn"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "test:integration": "npm run build && vscode-test",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,mjs,js,json,md,yaml,yml}": "prettier --write"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/mocha": "10.0.10",
+    "@types/node": "24.19.2",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-cli": "0.0.15",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.13.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@vscode/vsce-sign@2.1.0": true
+  },
+  "dependencies": {
+    "kokoro-js": "1.2.1"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#2D5CD2",
+    "theme": "dark"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
+  }
+}

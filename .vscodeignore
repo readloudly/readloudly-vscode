@@ -1,0 +1,15 @@
+**
+!dist/extension.js
+!media/player.js
+!media/kokoro.js
+!media/ort-wasm-simd-threaded.jsep.mjs
+!media/ort-wasm-simd-threaded.jsep.wasm.br
+!media/icon.svg
+!package.json
+!README.md
+!LICENSE
+!media/icons.woff
+!media/material-symbols-LICENSE.txt
+!media/icon.png
+!media/walkthrough/*.md
+!CHANGELOG.md
