@@ -153,3 +153,5 @@ media/player.js*
 media/kokoro.js
 media/ort-wasm-*
 *.vsix
+# graphify knowledge graph output
+graphify-out/
