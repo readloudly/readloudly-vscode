@@ -29,10 +29,10 @@
 - [x] **Interactive states:** Play/Pause updates its `aria-label` (`player.ts:225`); Previous/Next are `disabled` when the queue is empty.
 
 ## 4. Visual Perception and Comprehension
-- [!] **UI Contrast:** text and focus colours come from `--vscode-*` theme tokens and pass with the theme. The white play icon on the brand gradient fails at the light end (Note 2).
+- [x] **UI Contrast:** text and focus colours come from `--vscode-*` theme tokens and pass with the theme. The play icon passes after the Note 2 fix.
   | Pair | Foreground | Background | Ratio | Floor | Result |
   | :--- | :--- | :--- | ---: | ---: | :--- |
-  | play icon, gradient start | #ffffff | #fb923c | 2.26:1 | 3:1 | ❌ |
+  | play icon, gradient start | #ffffff | #ea580c | 3.56:1 | 3:1 | ✅ |
   | play icon, gradient end | #ffffff | #ff5a1f | 3.12:1 | 3:1 | ✅ |
 - [x] **Redundancy:** play state is icon + accessible name.
 - [x] **Motion:** the ripple and scale transitions stop under `prefers-reduced-motion`.
@@ -47,6 +47,6 @@
 ## 📝 Assessment Notes or Known Blockers
 
 - **Note 1 (high, fixed):** `#now` was `aria-live="polite"` and is rewritten for every spoken sentence, so a screen reader would read each sentence over the extension's own speech. The live region is removed from `#now` (`panel.ts`); `#note` keeps it for errors and hints.
-- **Note 2 (owner decision, a11y vs design):** same brand "live" orange as the Chrome extension: white icon on `#fb923c` is 2.26:1 (SC 1.4.11 needs 3:1). Darkening the start to about `#ea580c` passes; not changed.
+- **Note 2 (owner decision, resolved 2026-10-28):** the owner approved darkening the "live" gradient start from `#fb923c` (2.26:1) to `#ea580c` (3.56:1 under the white icon, SC 1.4.11); the end `#ff5a1f` stays (3.12:1).
 - **Note 3 (medium, not fixed):** the Speed chip shows "1×" but its name is "Playback speed" (SC 2.5.3 label in name). Shift+click for slower also works with Shift+Enter/Space, since keyboard activation carries the modifier.
 - **Checks:** `npm run typecheck`, `npm run lint`, `npm run build` exit 0; `npm test` 68/68.
