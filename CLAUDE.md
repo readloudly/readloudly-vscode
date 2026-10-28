@@ -68,6 +68,10 @@ Backend REST only (Bearer, like readloudly-native): `POST /auth/login`, `POST /a
 `GET /voices`, `POST /voices` (MP3 + `X-Credit-Usage`), credit/plan reads. Web deep links
 `/dashboard/?url=` and `/viewer/tts/d/?text=` (same as rl-chrome-extension). Nothing depends on this repo.
 
+## Accessibility
+
+When developing the frontend, follow strictly the accessibility rules in https://raw.githubusercontent.com/fecarrico/A11Y.md/v2.5.0/docs/en/A11Y.md
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

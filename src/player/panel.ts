@@ -63,7 +63,7 @@ function html(nonce: string, media: string, wasm: string, source: string): strin
     <label class="sr" for="voice">Voice</label>
     <select id="voice" title="Voice"></select>
   </div>
-  <div class="row"><p class="note" id="note" aria-live="polite"></p><p class="now" id="now" aria-live="polite"></p><span id="pos"></span><span id="file"></span></div>
+  <div class="row"><p class="note" id="note" aria-live="polite"></p><p class="now" id="now"></p><span id="pos"></span><span id="file"></span></div>
   <div class="track" aria-hidden="true"><i id="track"></i></div>
 </main>
 <script nonce="${nonce}" src="${media}/player.js"></script>

@@ -66,3 +66,7 @@
 
 - #12: live CodeLens controls only on the document being read (chat text no longer looks like the open file); reverted the auto-committed chat paste in test/fixtures/sample.md.
 - #13: webview copy lands after executeCommand resolves; readFocused polls the clipboard up to 1 s. Verified live on the Claude Code 2.1.310 webview (0/4 to 4/4).
+
+## A11y B4 audit (2026-10-28)
+- Player webview audited against A11Y.md v2.5.0: `REPORT.md` added (CONDITIONAL). Fixed: `#now` lost `aria-live`, it announced every sentence over the speech. Gate FAIL 1 → PASS.
+- Owner call: white play icon on the orange gradient is 2.26:1 (needs 3:1), same as the Chrome extension. Medium open: Speed chip name lacks its visible "1×".
