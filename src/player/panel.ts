@@ -71,7 +71,7 @@ function html(nonce: string, media: string, wasm: string, source: string): strin
 }
 
 const CSS = `
-:root { --accent: #2d5cd2; --live: linear-gradient(135deg, #fb923c, #ff5a1f); --muted: var(--vscode-descriptionForeground); --line: var(--vscode-widget-border, rgba(128,128,128,.35)); --hover: var(--vscode-toolbar-hoverBackground); }
+:root { --accent: #2d5cd2; --live: linear-gradient(135deg, #ea580c, #ff5a1f); --muted: var(--vscode-descriptionForeground); --line: var(--vscode-widget-border, rgba(128,128,128,.35)); --hover: var(--vscode-toolbar-hoverBackground); }
 body.vscode-dark, body.vscode-high-contrast { --accent: #93c5fd; }
 body { margin: 0; padding: 0; color: var(--vscode-foreground); font: 13px var(--vscode-font-family); }
 main { position: relative; display: grid; gap: 4px; padding: 6px 12px 8px; }
